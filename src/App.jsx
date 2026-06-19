@@ -37,37 +37,55 @@ const DEFAULT_QUESTIONS = [
 ];
 
 const BLUEPRINT = {
-  "Basic Biomedical Sciences":                   { pct:10, color:"#3b82f6", sub:["Physiology","Biochemistry","Microbiology","Immunology"] },
-  "Pharmaceutical Sciences":                      { pct:35, color:"#10b981", sub:["Medicinal Chemistry","Pharmacology & Toxicology","Pharmacognosy","Pharmaceutics","Pharmacokinetics","Sterile Compounding"] },
-  "Social/Behavioral/Administrative Sciences":    { pct:20, color:"#8b5cf6", sub:["Health Care Delivery (KSA)","Pharmacoepidemiology","Pharmacy Management","Pharmacy Law & SFDA","Biostatistics","Ethics"] },
-  "Clinical Sciences":                            { pct:35, color:"#ef4444", sub:["Drug Information & EBP","Clinical Pharmacokinetics","Patient Assessment","Clinical Pharmacology","Special Populations"] },
+  "Basic Biomedical Sciences":                   { pct:10, color:"#2563A8", sub:["Physiology","Biochemistry","Microbiology","Immunology"] },
+  "Pharmaceutical Sciences":                      { pct:35, color:"#1A7A5E", sub:["Medicinal Chemistry","Pharmacology & Toxicology","Pharmacognosy","Pharmaceutics","Pharmacokinetics","Sterile Compounding"] },
+  "Social/Behavioral/Administrative Sciences":    { pct:20, color:"#7C4BA0", sub:["Health Care Delivery (KSA)","Pharmacoepidemiology","Pharmacy Management","Pharmacy Law & SFDA","Biostatistics","Ethics"] },
+  "Clinical Sciences":                            { pct:35, color:"#B83B2A", sub:["Drug Information & EBP","Clinical Pharmacokinetics","Patient Assessment","Clinical Pharmacology","Special Populations"] },
+};
+
+// Design tokens — warm professional beige
+const T = {
+  bg:      "#F5F0E8",   // warm parchment base
+  bg2:     "#EDE8DF",   // slightly darker card bg
+  bg3:     "#E4DECE",   // borders/dividers
+  surface: "#FDFAF5",   // card surface (lightest)
+  ink:     "#1C1814",   // near-black text
+  ink2:    "#4A3F35",   // secondary text
+  ink3:    "#8C7B6E",   // muted text
+  accent:  "#2B5FA6",   // primary blue (professional)
+  green:   "#1A7A5E",   // pharmaceutical green
+  purple:  "#6B3F96",   // social/admin purple
+  red:     "#B83B2A",   // clinical red
+  gold:    "#C47A1E",   // warm amber/gold accent
+  border:  "rgba(140,110,80,0.18)",
+  shadow:  "0 2px 12px rgba(60,40,20,0.08)",
+  shadow2: "0 4px 24px rgba(60,40,20,0.13)",
 };
 
 const SECTIONS = Object.keys(BLUEPRINT);
 const DIFFICULTIES = ["سهل","متوسط","صعب"];
-const SC = { "Basic Biomedical Sciences":{accent:"#3b82f6",bg:"#1e3a5f"}, "Pharmaceutical Sciences":{accent:"#10b981",bg:"#1e4a3a"}, "Social/Behavioral/Administrative Sciences":{accent:"#8b5cf6",bg:"#4a1e5f"}, "Clinical Sciences":{accent:"#ef4444",bg:"#5f1e1e"} };
+const SC = {
+  "Basic Biomedical Sciences":                 { accent:"#2563A8", bg:T.bg },
+  "Pharmaceutical Sciences":                    { accent:"#1A7A5E", bg:T.bg },
+  "Social/Behavioral/Administrative Sciences":  { accent:"#7C4BA0", bg:T.bg },
+  "Clinical Sciences":                          { accent:"#B83B2A", bg:T.bg },
+};
 
 // Build a SCHS-blueprint-aligned exam with difficulty distribution
 function buildExam(allQuestions, settings) {
   const { totalQ, diffPct } = settings;
   const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
   const result = [];
-
-  // For each section, pick questions proportionally
   SECTIONS.forEach(sec => {
     const bp = BLUEPRINT[sec];
     const secCount = Math.round(totalQ * bp.pct / 100);
     const pool = allQuestions.filter(q => q.section === sec);
-
-    // Pick by difficulty distribution
     DIFFICULTIES.forEach(diff => {
       const need = Math.round(secCount * (diffPct[diff] || 33) / 100);
       const diffPool = shuffle(pool.filter(q => q.difficulty === diff));
       result.push(...diffPool.slice(0, need));
     });
   });
-
-  // Fill up to totalQ if rounding left gaps
   const chosen = shuffle(result).slice(0, totalQ);
   if (chosen.length < totalQ) {
     const usedIds = new Set(chosen.map(q => q.id));
@@ -78,13 +96,13 @@ function buildExam(allQuestions, settings) {
 }
 
 const S = {
-  page: { minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", direction:"ltr" },
-  card: { background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:20 },
-  input: { width:"100%", background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:10, padding:"11px 14px", color:"#f1f5f9", fontSize:14, boxSizing:"border-box", outline:"none" },
-  btn: (c="#3b82f6") => ({ background:`linear-gradient(135deg,${c},${c}bb)`, color:"#fff", border:"none", borderRadius:10, padding:"11px 18px", cursor:"pointer", fontSize:14, fontWeight:700 }),
-  ghost: { background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"#94a3b8", borderRadius:10, padding:"10px 16px", cursor:"pointer", fontSize:13, fontWeight:600 },
-  label: { color:"#94a3b8", fontSize:12, fontWeight:600, display:"block", marginBottom:5 },
-  tag: (c) => ({ background:c+"22", color:c, padding:"2px 9px", borderRadius:20, fontSize:11, fontWeight:700, display:"inline-block" }),
+  page:  { minHeight:"100vh", background:T.bg, fontFamily:"'Georgia', 'Times New Roman', serif", color:T.ink, direction:"ltr" },
+  card:  { background:T.surface, border:`1px solid ${T.border}`, borderRadius:14, padding:20, boxShadow:T.shadow },
+  input: { width:"100%", background:T.surface, border:`1.5px solid ${T.border}`, borderRadius:9, padding:"11px 14px", color:T.ink, fontSize:14, boxSizing:"border-box", outline:"none", fontFamily:"system-ui,sans-serif" },
+  btn:   (c=T.accent) => ({ background:c, color:"#fff", border:"none", borderRadius:9, padding:"11px 18px", cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"system-ui,sans-serif", letterSpacing:"0.01em" }),
+  ghost: { background:"transparent", border:`1.5px solid ${T.border}`, color:T.ink2, borderRadius:9, padding:"10px 16px", cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"system-ui,sans-serif" },
+  label: { color:T.ink3, fontSize:12, fontWeight:600, display:"block", marginBottom:5, fontFamily:"system-ui,sans-serif", textTransform:"uppercase", letterSpacing:"0.06em" },
+  tag:   (c) => ({ background:c+"18", color:c, padding:"2px 10px", borderRadius:20, fontSize:11, fontWeight:700, display:"inline-block", fontFamily:"system-ui,sans-serif", border:`1px solid ${c}33` }),
 };
 
 // ===================== LOGIN =====================
@@ -110,13 +128,13 @@ function LoginScreen({ onLogin }) {
     <div style={{ ...S.page, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
       <div style={{ width:"100%", maxWidth:400 }}>
         <div style={{ textAlign:"center", marginBottom:28 }}>
-          <div style={{ width:56, height:56, borderRadius:14, background:"linear-gradient(135deg,#3b82f6,#10b981)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 10px" }}>💊</div>
+          <div style={{ width:56, height:56, borderRadius:14, background:"linear-gradient(135deg,#2B5FA6,#1A7A5E)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 10px" }}>💊</div>
           <div style={{ fontSize:26, fontWeight:800 }}>SPLE Platform</div>
-          <div style={{ color:"#64748b", fontSize:13 }}>Saudi Pharmacist Licensure Exam</div>
+          <div style={{ color:"#8C7B6E", fontSize:13 }}>Saudi Pharmacist Licensure Exam</div>
         </div>
-        <div style={{ display:"flex", background:"rgba(255,255,255,0.05)", borderRadius:12, padding:4, marginBottom:20 }}>
+        <div style={{ display:"flex", background:T.surface, borderRadius:12, padding:4, marginBottom:20 }}>
           {["student","admin"].map(t=>(
-            <button key={t} onClick={()=>{setTab(t);setErr("");}} style={{ flex:1, padding:"9px", borderRadius:10, border:"none", cursor:"pointer", fontWeight:700, fontSize:14, background:tab===t?"linear-gradient(135deg,#3b82f6,#6366f1)":"transparent", color:tab===t?"#fff":"#64748b" }}>
+            <button key={t} onClick={()=>{setTab(t);setErr("");}} style={{ flex:1, padding:"9px", borderRadius:10, border:"none", cursor:"pointer", fontWeight:700, fontSize:14, background:tab===t?"linear-gradient(135deg,#3b82f6,#6366f1)":"transparent", color:tab===t?"#fff":"#8C7B6E" }}>
               {t==="student"?"🎓 Student":"⚙️ Admin"}
             </button>
           ))}
@@ -124,10 +142,10 @@ function LoginScreen({ onLogin }) {
         <div style={S.card}>
           <div style={{ marginBottom:14 }}><label style={S.label}>Email</label><input style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={tab==="admin"?"admin123":"student@email.com"} onKeyDown={e=>e.key==="Enter"&&login()} /></div>
           <div style={{ marginBottom:18 }}><label style={S.label}>Password</label><input style={S.input} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&login()} /></div>
-          {err && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8, padding:"9px 14px", color:"#fca5a5", fontSize:13, marginBottom:14 }}>⚠️ {err}</div>}
-          <button style={{ ...S.btn(tab==="admin"?"#8b5cf6":"#3b82f6"), width:"100%", padding:13 }} onClick={login}>{tab==="admin"?"Sign in as Admin":"Sign in as Student"}</button>
+          {err && <div style={{ background:"rgba(184,59,42,0.08)", border:"1px solid rgba(184,59,42,0.30)", borderRadius:8, padding:"9px 14px", color:"#B83B2A", fontSize:13, marginBottom:14 }}>⚠️ {err}</div>}
+          <button style={{ ...S.btn(tab==="admin"?"#7C4BA0":"#2B5FA6"), width:"100%", padding:13 }} onClick={login}>{tab==="admin"?"Sign in as Admin":"Sign in as Student"}</button>
         </div>
-        {tab==="admin" && <p style={{ textAlign:"center", color:"#334155", fontSize:11, marginTop:10 }}>admin123 / 123456</p>}
+        {tab==="admin" && <p style={{ textAlign:"center", color:"#4A3F35", fontSize:11, marginTop:10 }}>admin123 / 123456</p>}
       </div>
     </div>
   );
@@ -144,12 +162,12 @@ function QuestionStats({ questions }) {
     <div style={{ ...S.card, marginBottom:20 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
         <h2 style={{ margin:0, fontSize:16, fontWeight:700 }}>📊 Question Bank Statistics</h2>
-        <span style={{ color:"#64748b", fontSize:13 }}>{total} total questions</span>
+        <span style={{ color:"#8C7B6E", fontSize:13 }}>{total} total questions</span>
       </div>
 
       {/* Section breakdown */}
       <div style={{ marginBottom:16 }}>
-        <div style={{ color:"#64748b", fontSize:12, fontWeight:600, marginBottom:10 }}>BY SECTION vs BLUEPRINT TARGET</div>
+        <div style={{ color:"#8C7B6E", fontSize:12, fontWeight:600, marginBottom:10 }}>BY SECTION vs BLUEPRINT TARGET</div>
         {SECTIONS.map(sec => {
           const bp = BLUEPRINT[sec];
           const count = questions.filter(q=>q.section===sec).length;
@@ -159,16 +177,16 @@ function QuestionStats({ questions }) {
           return (
             <div key={sec} style={{ marginBottom:12 }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:12 }}>
-                <span style={{ color:"#cbd5e1" }}>{short}</span>
+                <span style={{ color:T.ink2 }}>{short}</span>
                 <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                   <span style={{ color:bp.color, fontWeight:700 }}>{count} q ({actual}%)</span>
-                  <span style={{ color:"#475569" }}>target {target}%</span>
+                  <span style={{ color:T.ink3 }}>target {target}%</span>
                 </div>
               </div>
-              <div style={{ height:6, background:"rgba(255,255,255,0.08)", borderRadius:3, position:"relative" }}>
+              <div style={{ height:6, background:T.bg3, borderRadius:3, position:"relative" }}>
                 <div style={{ width:`${Math.min(actual,100)}%`, height:"100%", borderRadius:3, background:bp.color, transition:"width 0.5s" }} />
                 {/* Target marker */}
-                <div style={{ position:"absolute", top:-2, left:`${target}%`, width:2, height:10, background:"rgba(255,255,255,0.3)", borderRadius:1 }} />
+                <div style={{ position:"absolute", top:-2, left:`${target}%`, width:2, height:10, background:"rgba(140,110,80,0.30)", borderRadius:1 }} />
               </div>
             </div>
           );
@@ -178,26 +196,26 @@ function QuestionStats({ questions }) {
       {/* Difficulty + AI row */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
         <div>
-          <div style={{ color:"#64748b", fontSize:12, fontWeight:600, marginBottom:10 }}>BY DIFFICULTY</div>
+          <div style={{ color:"#8C7B6E", fontSize:12, fontWeight:600, marginBottom:10 }}>BY DIFFICULTY</div>
           <div style={{ display:"flex", gap:8 }}>
-            {[["سهل","#22c55e"],["متوسط","#f59e0b"],["صعب","#ef4444"]].map(([d,c])=>(
+            {[["سهل","#1A7A5E"],["متوسط","#C47A1E"],["صعب","#B83B2A"]].map(([d,c])=>(
               <div key={d} style={{ flex:1, background:c+"11", border:`1px solid ${c}33`, borderRadius:10, padding:"10px 8px", textAlign:"center" }}>
                 <div style={{ color:c, fontSize:18, fontWeight:800 }}>{diffCounts[d]}</div>
-                <div style={{ color:"#64748b", fontSize:11 }}>{d}</div>
+                <div style={{ color:"#8C7B6E", fontSize:11 }}>{d}</div>
               </div>
             ))}
           </div>
         </div>
         <div>
-          <div style={{ color:"#64748b", fontSize:12, fontWeight:600, marginBottom:10 }}>SOURCE</div>
+          <div style={{ color:"#8C7B6E", fontSize:12, fontWeight:600, marginBottom:10 }}>SOURCE</div>
           <div style={{ display:"flex", gap:8 }}>
-            <div style={{ flex:1, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"10px 8px", textAlign:"center" }}>
+            <div style={{ flex:1, background:T.bg2, border:`1px solid ${T.border}`, borderRadius:10, padding:"10px 8px", textAlign:"center" }}>
               <div style={{ fontSize:18, fontWeight:800 }}>{total-aiCount}</div>
-              <div style={{ color:"#64748b", fontSize:11 }}>Manual</div>
+              <div style={{ color:"#8C7B6E", fontSize:11 }}>Manual</div>
             </div>
             <div style={{ flex:1, background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.2)", borderRadius:10, padding:"10px 8px", textAlign:"center" }}>
-              <div style={{ color:"#f59e0b", fontSize:18, fontWeight:800 }}>{aiCount}</div>
-              <div style={{ color:"#64748b", fontSize:11 }}>🤖 AI</div>
+              <div style={{ color:"#C47A1E", fontSize:18, fontWeight:800 }}>{aiCount}</div>
+              <div style={{ color:"#8C7B6E", fontSize:11 }}>🤖 AI</div>
             </div>
           </div>
         </div>
@@ -208,7 +226,7 @@ function QuestionStats({ questions }) {
 
 // ===================== ADMIN QUESTIONS =====================
 
-const sectionColors2 = { "Basic Biomedical Sciences":{accent:"#3b82f6"}, "Pharmaceutical Sciences":{accent:"#10b981"}, "Social/Behavioral/Administrative Sciences":{accent:"#8b5cf6"}, "Clinical Sciences":{accent:"#ef4444"} };
+const sectionColors2 = { "Basic Biomedical Sciences":{accent:"#2B5FA6"}, "Pharmaceutical Sciences":{accent:"#1A7A5E"}, "Social/Behavioral/Administrative Sciences":{accent:"#7C4BA0"}, "Clinical Sciences":{accent:"#B83B2A"} };
 
 function parseExcelFile(file) {
   return new Promise((resolve, reject) => {
@@ -255,7 +273,7 @@ function ExcelImportCard({ title, accentColor, onImport }) {
   const [preview, setPreview] = useState([]);
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
-  const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
+  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
@@ -280,24 +298,24 @@ function ExcelImportCard({ title, accentColor, onImport }) {
           {importing ? "⏳ Reading..." : "📂 Choose .xlsx"}
           <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display:"none" }} />
         </label>
-        <span style={{ color:"#64748b", fontSize:11 }}>Columns: section, category, difficulty, question, option_a…d, correct_answer (0-3), explanation</span>
+        <span style={{ color:"#8C7B6E", fontSize:11 }}>Columns: section, category, difficulty, question, option_a…d, correct_answer (0-3), explanation</span>
       </div>
-      {err && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8, padding:"9px 12px", color:"#fca5a5", fontSize:13, marginBottom:8 }}>⚠️ {err}</div>}
-      {success && <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.3)", borderRadius:8, padding:"9px 12px", color:"#86efac", fontSize:13, marginBottom:8 }}>{success}</div>}
+      {err && <div style={{ background:"rgba(184,59,42,0.08)", border:"1px solid rgba(184,59,42,0.30)", borderRadius:8, padding:"9px 12px", color:"#B83B2A", fontSize:13, marginBottom:8 }}>⚠️ {err}</div>}
+      {success && <div style={{ background:"rgba(26,122,94,0.10)", border:"1px solid rgba(26,122,94,0.35)", borderRadius:8, padding:"9px 12px", color:"#1A7A5E", fontSize:13, marginBottom:8 }}>{success}</div>}
       {preview.length > 0 && (
         <div>
           <div style={{ fontWeight:700, marginBottom:8, color:accentColor, fontSize:13 }}>Preview: {preview.length} questions found</div>
           <div style={{ maxHeight:160, overflowY:"auto", marginBottom:10, display:"flex", flexDirection:"column", gap:4 }}>
             {preview.slice(0,4).map((q,i) => (
-              <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:8, padding:"7px 10px", fontSize:12 }}>
+              <div key={i} style={{ background:T.bg2, borderRadius:8, padding:"7px 10px", fontSize:12 }}>
                 <div style={{ display:"flex", gap:5, marginBottom:2 }}>
-                  <span style={S.tag((sectionColors2[q.section]||{accent:"#3b82f6"}).accent)}>{q.section.split(" ")[0]}</span>
-                  <span style={S.tag(diffCol[q.difficulty]||"#f59e0b")}>{q.difficulty}</span>
+                  <span style={S.tag((sectionColors2[q.section]||{accent:"#2B5FA6"}).accent)}>{q.section.split(" ")[0]}</span>
+                  <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
                 </div>
-                <div style={{ color:"#e2e8f0" }}>{q.question.substring(0,85)}{q.question.length>85?"...":""}</div>
+                <div style={{ color:T.ink }}>{q.question.substring(0,85)}{q.question.length>85?"...":""}</div>
               </div>
             ))}
-            {preview.length > 4 && <div style={{ color:"#64748b", fontSize:11, textAlign:"center" }}>+{preview.length-4} more…</div>}
+            {preview.length > 4 && <div style={{ color:"#8C7B6E", fontSize:11, textAlign:"center" }}>+{preview.length-4} more…</div>}
           </div>
           <div style={{ display:"flex", gap:8 }}>
             <button onClick={confirm} style={{ ...S.btn(accentColor), flex:1, padding:10 }}>✅ Add {preview.length} Questions</button>
@@ -316,7 +334,7 @@ function BankTab({ label, accentColor, questions, onChange, importTitle }) {
   const [search, setSearch] = useState("");
   const [filterSec, setFilterSec] = useState("All");
   const [confirmClear, setConfirmClear] = useState(false);
-  const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
+  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
 
   const filtered = questions.filter(q =>
     (filterSec==="All"||q.section===filterSec) &&
@@ -339,16 +357,16 @@ function BankTab({ label, accentColor, questions, onChange, importTitle }) {
 
       {/* Header row */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
-        <div><h2 style={{ margin:0, fontSize:16, fontWeight:700 }}>All Questions <span style={{ color:"#64748b", fontSize:13, fontWeight:400 }}>({filtered.length} shown / {questions.length} total)</span></h2></div>
+        <div><h2 style={{ margin:0, fontSize:16, fontWeight:700 }}>All Questions <span style={{ color:"#8C7B6E", fontSize:13, fontWeight:400 }}>({filtered.length} shown / {questions.length} total)</span></h2></div>
         <div style={{ display:"flex", gap:8 }}>
           <button style={{ ...S.btn(accentColor), padding:"8px 14px", fontSize:13 }} onClick={()=>{ reset(); setEditing(null); setShowForm(true); }}>+ Add</button>
           {confirmClear
             ? <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                <span style={{ color:"#fca5a5", fontSize:12 }}>Delete all {questions.length}?</span>
-                <button onClick={()=>{ onChange([]); setConfirmClear(false); }} style={{ ...S.btn("#ef4444"), padding:"6px 12px", fontSize:12 }}>Yes, Delete</button>
+                <span style={{ color:"#B83B2A", fontSize:12 }}>Delete all {questions.length}?</span>
+                <button onClick={()=>{ onChange([]); setConfirmClear(false); }} style={{ ...S.btn("#B83B2A"), padding:"6px 12px", fontSize:12 }}>Yes, Delete</button>
                 <button onClick={()=>setConfirmClear(false)} style={{ ...S.ghost, padding:"6px 10px", fontSize:12 }}>Cancel</button>
               </div>
-            : <button onClick={()=>setConfirmClear(true)} style={{ ...S.ghost, padding:"8px 14px", fontSize:13, color:"#fca5a5", border:"1px solid rgba(239,68,68,0.3)" }}>🗑️ Clear All</button>
+            : <button onClick={()=>setConfirmClear(true)} style={{ ...S.ghost, padding:"8px 14px", fontSize:13, color:"#B83B2A", border:"1px solid rgba(184,59,42,0.30)" }}>🗑️ Clear All</button>
           }
         </div>
       </div>
@@ -383,30 +401,30 @@ function BankTab({ label, accentColor, questions, onChange, importTitle }) {
       {/* Filters */}
       <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
         {["All",...SECTIONS].map(s=>{ const bp=s!=="All"?BLUEPRINT[s]:null; const on=filterSec===s;
-          return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"4px 11px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?accentColor:"rgba(255,255,255,0.15)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":on?accentColor+"22":"transparent", color:on&&bp?bp.color:on?accentColor:"#94a3b8" }}>{s==="All"?"All":s==="Social/Behavioral/Administrative Sciences"?"Social/Admin":s.split(" ")[0]}</button>;
+          return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"4px 11px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?accentColor:"rgba(140,110,80,0.18)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":on?accentColor+"22":"transparent", color:on&&bp?bp.color:on?accentColor:"#8C7B6E" }}>{s==="All"?"All":s==="Social/Behavioral/Administrative Sciences"?"Social/Admin":s.split(" ")[0]}</button>;
         })}
       </div>
       <input style={{ ...S.input, marginBottom:12 }} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions..." />
 
       {/* List */}
       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-        {filtered.length===0 && <div style={{ ...S.card, textAlign:"center", padding:30, color:"#475569" }}>No questions found.</div>}
+        {filtered.length===0 && <div style={{ ...S.card, textAlign:"center", padding:30, color:T.ink3 }}>No questions found.</div>}
         {filtered.map(q=>{
-          const col=SC[q.section]||{accent:"#3b82f6"};
+          const col=SC[q.section]||{accent:"#2B5FA6"};
           return (
             <div key={q.id} style={{ ...S.card, padding:"11px 15px" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", gap:5, marginBottom:5, flexWrap:"wrap" }}>
                     <span style={S.tag(col.accent)}>{q.section.split(" ")[0]}</span>
-                    <span style={S.tag("#94a3b8")}>{q.category}</span>
+                    <span style={S.tag("#8C7B6E")}>{q.category}</span>
                     <span style={S.tag(diffCol[q.difficulty])}>{q.difficulty}</span>
                   </div>
-                  <p style={{ color:"#e2e8f0", fontSize:13, margin:0, lineHeight:1.5 }}>{q.question}</p>
+                  <p style={{ color:T.ink, fontSize:13, margin:0, lineHeight:1.5 }}>{q.question}</p>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                   <button onClick={()=>{ setForm({...q,options:[...q.options]}); setEditing(q.id); setShowForm(true); }} style={{ ...S.ghost, padding:"5px 10px" }}>✏️</button>
-                  <button onClick={()=>{ if(window.confirm("Delete this question?")) onChange(questions.filter(x=>x.id!==q.id)); }} style={{ ...S.ghost, padding:"5px 10px", color:"#fca5a5" }}>🗑️</button>
+                  <button onClick={()=>{ if(window.confirm("Delete this question?")) onChange(questions.filter(x=>x.id!==q.id)); }} style={{ ...S.ghost, padding:"5px 10px", color:"#B83B2A" }}>🗑️</button>
                 </div>
               </div>
             </div>
@@ -427,9 +445,9 @@ function AdminQuestions({ questions, onChangeQuestions }) {
   const saveShared = q => { onChangeQuestions(q); };
 
   const tabs = [
-    { id:"shared",  label:"📚 Shared Bank",   color:"#3b82f6", count: questions.length },
-    { id:"study",   label:"📖 Study Bank",     color:"#10b981", count: studyQ.length },
-    { id:"exam",    label:"🎯 Exam Bank",       color:"#ef4444", count: examQ.length },
+    { id:"shared",  label:"📚 Shared Bank",   color:"#2B5FA6", count: questions.length },
+    { id:"study",   label:"📖 Study Bank",     color:"#1A7A5E", count: studyQ.length },
+    { id:"exam",    label:"🎯 Exam Bank",       color:"#B83B2A", count: examQ.length },
   ];
 
   return (
@@ -437,15 +455,15 @@ function AdminQuestions({ questions, onChangeQuestions }) {
       {/* Bank selector */}
       <div style={{ display:"flex", gap:8, marginBottom:20 }}>
         {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setBankTab(t.id)} style={{ flex:1, padding:"11px", borderRadius:12, border:`2px solid ${bankTab===t.id?t.color:"rgba(255,255,255,0.1)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:bankTab===t.id?t.color+"18":"transparent", color:bankTab===t.id?t.color:"#64748b" }}>
+          <button key={t.id} onClick={()=>setBankTab(t.id)} style={{ flex:1, padding:"11px", borderRadius:12, border:`2px solid ${bankTab===t.id?t.color:"rgba(140,110,80,0.12)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:bankTab===t.id?t.color+"18":"transparent", color:bankTab===t.id?t.color:"#8C7B6E" }}>
             {t.label}
-            <span style={{ display:"block", fontSize:11, fontWeight:400, marginTop:2, color:bankTab===t.id?t.color:"#475569" }}>{t.count} questions</span>
+            <span style={{ display:"block", fontSize:11, fontWeight:400, marginTop:2, color:bankTab===t.id?t.color:T.ink3 }}>{t.count} questions</span>
           </button>
         ))}
       </div>
-      {bankTab==="shared" && <BankTab label="Shared" accentColor="#3b82f6" questions={questions} onChange={saveShared} importTitle="Import to Shared Bank (used by both Study & Exam)" />}
-      {bankTab==="study"  && <BankTab label="Study"  accentColor="#10b981" questions={studyQ}    onChange={saveStudy}  importTitle="Import to Study Bank only" />}
-      {bankTab==="exam"   && <BankTab label="Exam"   accentColor="#ef4444" questions={examQ}     onChange={saveExam}   importTitle="Import to Exam Bank only" />}
+      {bankTab==="shared" && <BankTab label="Shared" accentColor="#2B5FA6" questions={questions} onChange={saveShared} importTitle="Import to Shared Bank (used by both Study & Exam)" />}
+      {bankTab==="study"  && <BankTab label="Study"  accentColor="#1A7A5E" questions={studyQ}    onChange={saveStudy}  importTitle="Import to Study Bank only" />}
+      {bankTab==="exam"   && <BankTab label="Exam"   accentColor="#B83B2A" questions={examQ}     onChange={saveExam}   importTitle="Import to Exam Bank only" />}
     </div>
   );
 }
@@ -464,8 +482,8 @@ function AdminStudents({ users, onChange }) {
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-        <div><h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>Students</h2><span style={{ color:"#64748b", fontSize:13 }}>{users.length} enrolled</span></div>
-        <button style={{ ...S.btn("#3b82f6"), width:"auto" }} onClick={()=>setShowForm(!showForm)}>+ Add Student</button>
+        <div><h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>Students</h2><span style={{ color:"#8C7B6E", fontSize:13 }}>{users.length} enrolled</span></div>
+        <button style={{ ...S.btn("#2B5FA6"), width:"auto" }} onClick={()=>setShowForm(!showForm)}>+ Add Student</button>
       </div>
       {showForm && (
         <div style={{ ...S.card, marginBottom:16, border:"1px solid rgba(59,130,246,0.3)" }}>
@@ -476,24 +494,24 @@ function AdminStudents({ users, onChange }) {
             <div><label style={S.label}>Password</label><input style={S.input} type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="Temporary password" /></div>
             <div><label style={S.label}>University</label><input style={S.input} value={form.university} onChange={e=>setForm({...form,university:e.target.value})} placeholder="KSU, KAU..." /></div>
           </div>
-          {err&&<div style={{ color:"#fca5a5", fontSize:13, marginBottom:10 }}>⚠️ {err}</div>}
+          {err&&<div style={{ color:"#B83B2A", fontSize:13, marginBottom:10 }}>⚠️ {err}</div>}
           <div style={{ display:"flex", gap:8 }}>
-            <button style={S.btn("#3b82f6")} onClick={add}>Add Student</button>
+            <button style={S.btn("#2B5FA6")} onClick={add}>Add Student</button>
             <button style={{ ...S.ghost, flex:1 }} onClick={()=>{ setShowForm(false); setErr(""); }}>Cancel</button>
           </div>
         </div>
       )}
-      {users.length===0 ? <div style={{ ...S.card, textAlign:"center", padding:40 }}><div style={{ fontSize:36 }}>🎓</div><p style={{ color:"#64748b" }}>No students yet.</p></div> : (
+      {users.length===0 ? <div style={{ ...S.card, textAlign:"center", padding:40 }}><div style={{ fontSize:36 }}>🎓</div><p style={{ color:"#8C7B6E" }}>No students yet.</p></div> : (
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           {users.map(u=>(
             <div key={u.id} style={{ ...S.card, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ width:38, height:38, borderRadius:10, background:"linear-gradient(135deg,#3b82f6,#6366f1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:800, color:"#fff" }}>{u.name[0]}</div>
-                <div><div style={{ fontWeight:700 }}>{u.name}</div><div style={{ color:"#64748b", fontSize:12 }}>{u.email}{u.university&&` · ${u.university}`}</div></div>
+                <div style={{ width:38, height:38, borderRadius:10, background:"linear-gradient(135deg,#2B5FA6,#7C4BA0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:800, color:"#fff" }}>{u.name[0]}</div>
+                <div><div style={{ fontWeight:700 }}>{u.name}</div><div style={{ color:"#8C7B6E", fontSize:12 }}>{u.email}{u.university&&` · ${u.university}`}</div></div>
               </div>
               <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                <span style={{ color:"#475569", fontSize:12 }}>{u.joinDate}</span>
-                <button onClick={()=>{ if(window.confirm("Remove?")) onChange(users.filter(x=>x.id!==u.id)); }} style={{ ...S.ghost, padding:"5px 10px", color:"#fca5a5" }}>🗑️</button>
+                <span style={{ color:T.ink3, fontSize:12 }}>{u.joinDate}</span>
+                <button onClick={()=>{ if(window.confirm("Remove?")) onChange(users.filter(x=>x.id!==u.id)); }} style={{ ...S.ghost, padding:"5px 10px", color:"#B83B2A" }}>🗑️</button>
               </div>
             </div>
           ))}
@@ -512,17 +530,17 @@ function AdminReports({ users, results }) {
   return (
     <div>
       <h2 style={{ margin:"0 0 16px", fontSize:18, fontWeight:700 }}>Reports</h2>
-      {rows.length===0 ? <div style={{ ...S.card, textAlign:"center", padding:40 }}><p style={{ color:"#64748b" }}>No data yet.</p></div> : (
+      {rows.length===0 ? <div style={{ ...S.card, textAlign:"center", padding:40 }}><p style={{ color:"#8C7B6E" }}>No data yet.</p></div> : (
         <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-            <thead><tr style={{ background:"rgba(255,255,255,0.05)" }}>{["Student","University","Exams","Avg Score","Last Exam"].map(h=><th key={h} style={{ padding:"11px 14px", textAlign:"left", color:"#64748b", fontWeight:600, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>{h}</th>)}</tr></thead>
+            <thead><tr style={{ background:T.surface }}>{["Student","University","Exams","Avg Score","Last Exam"].map(h=><th key={h} style={{ padding:"11px 14px", textAlign:"left", color:"#8C7B6E", fontWeight:600, borderBottom:`1px solid ${T.border}` }}>{h}</th>)}</tr></thead>
             <tbody>{rows.map(u=>(
-              <tr key={u.id} style={{ borderBottom:"1px solid rgba(255,255,255,0.05)" }}>
-                <td style={{ padding:"11px 14px" }}><div style={{ fontWeight:700 }}>{u.name}</div><div style={{ color:"#64748b", fontSize:11 }}>{u.email}</div></td>
-                <td style={{ padding:"11px 14px", color:"#94a3b8" }}>{u.university||"—"}</td>
-                <td style={{ padding:"11px 14px", color:"#94a3b8" }}>{u.exams}</td>
-                <td style={{ padding:"11px 14px" }}>{u.avg!==null?<span style={{ color:u.avg>=70?"#86efac":u.avg>=60?"#fde68a":"#fca5a5", fontWeight:700 }}>{u.avg}%</span>:<span style={{ color:"#475569" }}>—</span>}</td>
-                <td style={{ padding:"11px 14px", color:"#64748b" }}>{u.last||"—"}</td>
+              <tr key={u.id} style={{ borderBottom:"1px solid rgba(140,110,80,0.06)" }}>
+                <td style={{ padding:"11px 14px" }}><div style={{ fontWeight:700 }}>{u.name}</div><div style={{ color:"#8C7B6E", fontSize:11 }}>{u.email}</div></td>
+                <td style={{ padding:"11px 14px", color:"#8C7B6E" }}>{u.university||"—"}</td>
+                <td style={{ padding:"11px 14px", color:"#8C7B6E" }}>{u.exams}</td>
+                <td style={{ padding:"11px 14px" }}>{u.avg!==null?<span style={{ color:u.avg>=70?"#1A7A5E":u.avg>=60?"#C47A1E":"#B83B2A", fontWeight:700 }}>{u.avg}%</span>:<span style={{ color:T.ink3 }}>—</span>}</td>
+                <td style={{ padding:"11px 14px", color:"#8C7B6E" }}>{u.last||"—"}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -537,7 +555,7 @@ function SettingsPanel({ title, icon, accentColor, settings, onSave, showTime })
   const [s, setS] = useState(settings);
   const [saved, setSaved] = useState(false);
   const questions = DB.getQuestions();
-  const diffCol = { "سهل": "#22c55e", "متوسط": "#f59e0b", "صعب": "#ef4444" };
+  const diffCol = { "سهل": "#1A7A5E", "متوسط": "#C47A1E", "صعب": "#B83B2A" };
   const diffTotal = Object.values(s.diffPct).reduce((a, b) => a + b, 0);
   const update = (key, val) => setS(p => ({ ...p, [key]: val }));
   const updateDiff = (diff, val) => { const v = Math.max(0, Math.min(100, Number(val))); setS(p => ({ ...p, diffPct: { ...p.diffPct, [diff]: v } })); };
@@ -548,16 +566,16 @@ function SettingsPanel({ title, icon, accentColor, settings, onSave, showTime })
     <div style={{ ...S.card, border:`1px solid ${accentColor}33`, marginBottom:24 }}>
       <div style={{ fontWeight:800, fontSize:17, marginBottom:16, color: accentColor }}>{icon} {title}</div>
       <div style={{ display:"grid", gridTemplateColumns: showTime ? "1fr 1fr" : "1fr", gap:14, marginBottom:16 }}>
-        <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:12, padding:14 }}>
+        <div style={{ background:T.bg2, borderRadius:12, padding:14 }}>
           <label style={S.label}>Number of Questions: <span style={{ color:accentColor, fontWeight:800 }}>{s.totalQ}</span></label>
           <input type="range" min={10} max={200} step={5} value={s.totalQ} onChange={e => update("totalQ", Number(e.target.value))} style={{ width:"100%", accentColor, margin:"8px 0 4px" }} />
-          <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10</span><span>100</span><span>200</span></div>
+          <div style={{ display:"flex", justifyContent:"space-between", color:T.ink3, fontSize:11 }}><span>10</span><span>100</span><span>200</span></div>
         </div>
         {showTime && (
-          <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:12, padding:14 }}>
+          <div style={{ background:T.bg2, borderRadius:12, padding:14 }}>
             <label style={S.label}>Time: <span style={{ color:accentColor, fontWeight:800 }}>{s.timeMins} min ({Math.floor(s.timeMins/60)}h {s.timeMins%60}m)</span></label>
             <input type="range" min={10} max={300} step={5} value={s.timeMins} onChange={e => update("timeMins", Number(e.target.value))} style={{ width:"100%", accentColor, margin:"8px 0 4px" }} />
-            <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10m</span><span>120m</span><span>300m</span></div>
+            <div style={{ display:"flex", justifyContent:"space-between", color:T.ink3, fontSize:11 }}><span>10m</span><span>120m</span><span>300m</span></div>
           </div>
         )}
       </div>
@@ -565,30 +583,30 @@ function SettingsPanel({ title, icon, accentColor, settings, onSave, showTime })
       <div style={{ marginBottom:14 }}>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
           <span style={{ ...S.label, margin:0 }}>Difficulty Distribution</span>
-          <span style={{ fontSize:11, color: diffTotal===100?"#22c55e":"#ef4444", fontWeight:700 }}>Total: {diffTotal}% {diffTotal!==100?"⚠️":"✅"}</span>
+          <span style={{ fontSize:11, color: diffTotal===100?"#1A7A5E":"#B83B2A", fontWeight:700 }}>Total: {diffTotal}% {diffTotal!==100?"⚠️":"✅"}</span>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
           {DIFFICULTIES.map(diff => (
             <div key={diff} style={{ background:diffCol[diff]+"11", border:`1px solid ${diffCol[diff]}33`, borderRadius:10, padding:12, textAlign:"center" }}>
               <div style={{ color:diffCol[diff], fontWeight:700, fontSize:12, marginBottom:6 }}>{diff==="سهل"?"🟢":"diff"==="متوسط"?"🟡":"🔴"} {diff}</div>
               <input type="number" min={0} max={100} value={s.diffPct[diff]} onChange={e=>updateDiff(diff,e.target.value)} style={{ ...S.input, width:"100%", textAlign:"center", padding:"6px", fontSize:16, fontWeight:800, color:diffCol[diff] }} />
-              <div style={{ color:"#64748b", fontSize:10, marginTop:4 }}>{Math.round(s.totalQ*s.diffPct[diff]/100)} q</div>
+              <div style={{ color:"#8C7B6E", fontSize:10, marginTop:4 }}>{Math.round(s.totalQ*s.diffPct[diff]/100)} q</div>
             </div>
           ))}
         </div>
       </div>
 
       <div style={{ marginBottom:14 }}>
-        <div style={{ color:"#64748b", fontSize:12, fontWeight:600, marginBottom:8 }}>SECTION PREVIEW (SCHS Blueprint)</div>
+        <div style={{ color:"#8C7B6E", fontSize:12, fontWeight:600, marginBottom:8 }}>SECTION PREVIEW (SCHS Blueprint)</div>
         {preview.map(({sec,secCount,available,bp}) => {
           const short = sec==="Social/Behavioral/Administrative Sciences"?"Social/Admin":sec.split(" ")[0];
           const ok = available >= secCount;
           return <div key={sec} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-            <span style={{ color:"#94a3b8", fontSize:11, width:80, flexShrink:0 }}>{short}</span>
-            <div style={{ flex:1, height:6, background:"rgba(255,255,255,0.06)", borderRadius:3 }}>
+            <span style={{ color:"#8C7B6E", fontSize:11, width:80, flexShrink:0 }}>{short}</span>
+            <div style={{ flex:1, height:6, background:T.bg2, borderRadius:3 }}>
               <div style={{ width:`${bp.pct}%`, height:"100%", background:bp.color, borderRadius:3 }} />
             </div>
-            <span style={{ color: ok?bp.color:"#ef4444", fontSize:11, fontWeight:700, width:70, textAlign:"right" }}>{secCount} {!ok&&"⚠️"}</span>
+            <span style={{ color: ok?bp.color:"#B83B2A", fontSize:11, fontWeight:700, width:70, textAlign:"right" }}>{secCount} {!ok&&"⚠️"}</span>
           </div>;
         })}
       </div>
@@ -604,17 +622,17 @@ function AdminExamSettings() {
   return (
     <div>
       <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>⚙️ Exam Settings</h1>
-      <p style={{ color:"#64748b", marginBottom:24 }}>Configure both study session and exam parameters</p>
+      <p style={{ color:"#8C7B6E", marginBottom:24 }}>Configure both study session and exam parameters</p>
       <SettingsPanel
         title="Study Session — دورة المراجعة"
-        icon="📚" accentColor="#10b981"
+        icon="📚" accentColor="#1A7A5E"
         settings={DB.getStudySettings()}
         onSave={DB.saveStudySettings}
         showTime={false}
       />
       <SettingsPanel
         title="Exam — الاختبار الرسمي"
-        icon="🎯" accentColor="#ef4444"
+        icon="🎯" accentColor="#B83B2A"
         settings={DB.getExamSettings()}
         onSave={DB.saveExamSettings}
         showTime={true}
@@ -636,16 +654,16 @@ function AdminDashboard({ user, onLogout }) {
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   return (
-    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", display:"flex" }}>
-      <div style={{ width:210, background:"rgba(255,255,255,0.03)", borderRight:"1px solid rgba(255,255,255,0.08)", padding:18, display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
-        <div style={{ marginBottom:20 }}><div style={{ fontSize:17, fontWeight:800 }}>💊 SPLE</div><div style={{ color:"#8b5cf6", fontSize:10, fontWeight:700 }}>ADMIN PANEL</div></div>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex" }}>
+      <div style={{ width:210, background:T.bg2, borderRight:`1px solid ${T.border}`, padding:18, display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
+        <div style={{ marginBottom:20 }}><div style={{ fontSize:17, fontWeight:800 }}>💊 SPLE</div><div style={{ color:"#7C4BA0", fontSize:10, fontWeight:700 }}>ADMIN PANEL</div></div>
         {TABS.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{ background:tab===t.id?"rgba(139,92,246,0.15)":"transparent", border:tab===t.id?"1px solid rgba(139,92,246,0.3)":"1px solid transparent", borderRadius:9, padding:"9px 12px", cursor:"pointer", textAlign:"left", color:tab===t.id?"#c4b5fd":"#64748b", fontSize:13, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
-            {t.icon} {t.label} {t.badge&&<span style={{ background:"#f59e0b22",color:"#f59e0b",fontSize:9,padding:"1px 5px",borderRadius:6,marginLeft:"auto" }}>{t.badge}</span>}
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{ background:tab===t.id?"rgba(139,92,246,0.15)":"transparent", border:tab===t.id?"1px solid rgba(139,92,246,0.3)":"1px solid transparent", borderRadius:9, padding:"9px 12px", cursor:"pointer", textAlign:"left", color:tab===t.id?"#9B6DBF":"#8C7B6E", fontSize:13, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
+            {t.icon} {t.label} {t.badge&&<span style={{ background:"#C47A1E22",color:"#C47A1E",fontSize:9,padding:"1px 5px",borderRadius:6,marginLeft:"auto" }}>{t.badge}</span>}
           </button>
         ))}
         <div style={{ marginTop:"auto" }}>
-          <div style={{ color:"#334155", fontSize:11, marginBottom:6 }}>{user.name}</div>
+          <div style={{ color:"#4A3F35", fontSize:11, marginBottom:6 }}>{user.name}</div>
           <button onClick={onLogout} style={{ ...S.ghost, width:"100%", textAlign:"left", fontSize:12 }}>🚪 Logout</button>
         </div>
       </div>
@@ -653,13 +671,13 @@ function AdminDashboard({ user, onLogout }) {
         {tab==="overview" && (
           <div>
             <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>Overview</h1>
-            <p style={{ color:"#64748b", marginBottom:20 }}>Platform summary</p>
+            <p style={{ color:"#8C7B6E", marginBottom:20 }}>Platform summary</p>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:20 }}>
-              {[["❓",questions.length,"Questions","#3b82f6"],["🎓",users.length,"Students","#10b981"],["📝",results.length,"Exams","#8b5cf6"],["📊",`${avg}%`,"Avg Score","#f59e0b"]].map(([icon,val,label,color])=>(
-                <div key={label} style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${color}33`, borderRadius:14, padding:18 }}>
+              {[["❓",questions.length,"Questions","#2B5FA6"],["🎓",users.length,"Students","#1A7A5E"],["📝",results.length,"Exams","#7C4BA0"],["📊",`${avg}%`,"Avg Score","#C47A1E"]].map(([icon,val,label,color])=>(
+                <div key={label} style={{ background:T.bg2, border:`1px solid ${color}33`, borderRadius:14, padding:18 }}>
                   <div style={{ fontSize:24 }}>{icon}</div>
                   <div style={{ fontSize:28, fontWeight:800, color, marginTop:6 }}>{val}</div>
-                  <div style={{ color:"#64748b", fontSize:12 }}>{label}</div>
+                  <div style={{ color:"#8C7B6E", fontSize:12 }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -722,12 +740,12 @@ function StudentDashboard({ user, onLogout }) {
   const best = examResults.length ? Math.max(...examResults.map(r=>r.score)) : 0;
 
   return (
-    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
       {/* Header */}
-      <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.08)", padding:"12px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}><span style={{ fontSize:20 }}>💊</span><div><div style={{ fontWeight:800 }}>SPLE Platform</div><div style={{ color:"#64748b", fontSize:11 }}>Student Portal</div></div></div>
+      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}><span style={{ fontSize:20 }}>💊</span><div><div style={{ fontWeight:800 }}>SPLE Platform</div><div style={{ color:"#8C7B6E", fontSize:11 }}>Student Portal</div></div></div>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ textAlign:"right" }}><div style={{ fontWeight:700, fontSize:13 }}>{user.name}</div><div style={{ color:"#64748b", fontSize:11 }}>{user.university||user.email}</div></div>
+          <div style={{ textAlign:"right" }}><div style={{ fontWeight:700, fontSize:13 }}>{user.name}</div><div style={{ color:"#8C7B6E", fontSize:11 }}>{user.university||user.email}</div></div>
           <button onClick={onLogout} style={{ ...S.ghost, padding:"7px 12px" }}>Logout</button>
         </div>
       </div>
@@ -735,8 +753,8 @@ function StudentDashboard({ user, onLogout }) {
       <div style={{ maxWidth:720, margin:"0 auto", padding:24 }}>
         {/* Stats */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:24 }}>
-          {[["📝",examResults.length,"Exams Taken","#3b82f6"],["📊",`${avg}%`,"Avg Score","#10b981"],["🏆",`${best}%`,"Best Score","#f59e0b"]].map(([icon,val,label,color])=>(
-            <div key={label} style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${color}33`, borderRadius:14, padding:18 }}><div style={{ fontSize:22 }}>{icon}</div><div style={{ fontSize:26, fontWeight:800, color, marginTop:6 }}>{val}</div><div style={{ color:"#64748b", fontSize:12 }}>{label}</div></div>
+          {[["📝",examResults.length,"Exams Taken","#2B5FA6"],["📊",`${avg}%`,"Avg Score","#1A7A5E"],["🏆",`${best}%`,"Best Score","#C47A1E"]].map(([icon,val,label,color])=>(
+            <div key={label} style={{ background:T.bg2, border:`1px solid ${color}33`, borderRadius:14, padding:18 }}><div style={{ fontSize:22 }}>{icon}</div><div style={{ fontSize:26, fontWeight:800, color, marginTop:6 }}>{val}</div><div style={{ color:"#8C7B6E", fontSize:12 }}>{label}</div></div>
           ))}
         </div>
 
@@ -745,50 +763,50 @@ function StudentDashboard({ user, onLogout }) {
           {/* Study Materials */}
           <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.35)", background:"rgba(139,92,246,0.04)", display:"flex", flexDirection:"column" }}>
             <div style={{ fontSize:28, marginBottom:8 }}>📖</div>
-            <div style={{ fontWeight:800, fontSize:15, color:"#8b5cf6", marginBottom:6 }}>Study Materials</div>
-            <div style={{ color:"#64748b", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>23 درساً شاملاً مع نقاط مراجعة وجداول مرجعية</div>
+            <div style={{ fontWeight:800, fontSize:15, color:"#7C4BA0", marginBottom:6 }}>Study Materials</div>
+            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>23 درساً شاملاً مع نقاط مراجعة وجداول مرجعية</div>
             <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📚 23 Lessons</span>
-              <span style={{ background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🗒️ Key Points</span>
+              <span style={{ background:"rgba(139,92,246,0.12)", color:"#7C4BA0", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📚 23 Lessons</span>
+              <span style={{ background:"rgba(139,92,246,0.12)", color:"#7C4BA0", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🗒️ Key Points</span>
             </div>
-            <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#8b5cf6"), width:"100%", padding:10, fontSize:13 }}>Browse Lessons →</button>
+            <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), width:"100%", padding:10, fontSize:13 }}>Browse Lessons →</button>
           </div>
 
           {/* Study Session */}
           <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.35)", background:"rgba(16,185,129,0.04)", display:"flex", flexDirection:"column" }}>
             <div style={{ fontSize:28, marginBottom:8 }}>📝</div>
-            <div style={{ fontWeight:800, fontSize:15, color:"#10b981", marginBottom:6 }}>Study Session</div>
-            <div style={{ color:"#64748b", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>تدرّب مع إجابات فورية وشرح لكل سؤال</div>
+            <div style={{ fontWeight:800, fontSize:15, color:"#1A7A5E", marginBottom:6 }}>Study Session</div>
+            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>تدرّب مع إجابات فورية وشرح لكل سؤال</div>
             <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>✅ Instant Feedback</span>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>✅ Instant Feedback</span>
             </div>
-            <button onClick={()=>startSession("study")} style={{ ...S.btn("#10b981"), width:"100%", padding:10, fontSize:13 }}>Start Session →</button>
+            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:10, fontSize:13 }}>Start Session →</button>
           </div>
 
           {/* Exam */}
           <div style={{ ...S.card, border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.04)", display:"flex", flexDirection:"column" }}>
             <div style={{ fontSize:28, marginBottom:8 }}>🎯</div>
-            <div style={{ fontWeight:800, fontSize:15, color:"#ef4444", marginBottom:6 }}>Official Exam</div>
-            <div style={{ color:"#64748b", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>اختبار محاكاة حقيقي بدون إجابات أثناء الاختبار</div>
+            <div style={{ fontWeight:800, fontSize:15, color:"#B83B2A", marginBottom:6 }}>Official Exam</div>
+            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>اختبار محاكاة حقيقي بدون إجابات أثناء الاختبار</div>
             <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {examSettings.totalQ} Q</span>
-              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏱️ {examSettings.timeMins} min</span>
-              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🔒 No Feedback</span>
+              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {examSettings.totalQ} Q</span>
+              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏱️ {examSettings.timeMins} min</span>
+              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🔒 No Feedback</span>
             </div>
-            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#ef4444"), width:"100%", padding:10, fontSize:13 }}>Start Exam →</button>
+            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:10, fontSize:13 }}>Start Exam →</button>
           </div>
         </div>
 
         {/* History */}
         <div style={S.card}>
           <div style={{ fontWeight:700, marginBottom:14 }}>Exam History</div>
-          {examResults.length===0 ? <p style={{ color:"#475569", textAlign:"center", padding:"16px 0" }}>No exams yet.</p> : (
+          {examResults.length===0 ? <p style={{ color:T.ink3, textAlign:"center", padding:"16px 0" }}>No exams yet.</p> : (
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {[...examResults].reverse().slice(0,10).map((r,i)=>(
-                <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"10px 14px" }}>
-                  <div><div style={{ fontWeight:700 }}>{r.correct}/{r.total} Correct</div><div style={{ color:"#64748b", fontSize:12 }}>{r.date}</div></div>
-                  <div style={{ fontSize:22, fontWeight:800, color:r.score>=70?"#86efac":r.score>=60?"#fde68a":"#fca5a5" }}>{r.score}%</div>
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:T.bg2, borderRadius:10, padding:"10px 14px" }}>
+                  <div><div style={{ fontWeight:700 }}>{r.correct}/{r.total} Correct</div><div style={{ color:"#8C7B6E", fontSize:12 }}>{r.date}</div></div>
+                  <div style={{ fontSize:22, fontWeight:800, color:r.score>=70?"#1A7A5E":r.score>=60?"#C47A1E":"#B83B2A" }}>{r.score}%</div>
                 </div>
               ))}
             </div>
@@ -802,7 +820,7 @@ function StudentDashboard({ user, onLogout }) {
 // ===================== STUDY MATERIALS DATA =====================
 const STUDY_LESSONS = [
   {
-    id:"1.1", section:"Basic Biomedical Sciences", title:"Cardiovascular Physiology", color:"#3b82f6",
+    id:"1.1", section:"Basic Biomedical Sciences", title:"Cardiovascular Physiology", color:"#2B5FA6",
     blocks:[
       { type:"text", content:"The cardiovascular system delivers oxygenated blood to tissues. Understanding the determinants of cardiac output and blood pressure is fundamental for managing hypertension, heart failure, and shock." },
       { type:"formula", label:"Core Formulas", lines:["CO = HR × SV", "MAP = CO × SVR", "MAP = DBP + ⅓(SBP − DBP)", "Normal CO = 4–8 L/min"] },
@@ -818,7 +836,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"1.2", section:"Basic Biomedical Sciences", title:"Renal Physiology & GFR", color:"#3b82f6",
+    id:"1.2", section:"Basic Biomedical Sciences", title:"Renal Physiology & GFR", color:"#2B5FA6",
     blocks:[
       { type:"text", content:"The kidneys filter ~180 L/day, regulating fluid balance, electrolytes, acid-base balance, and drug excretion. GFR is the key measure of renal function and drives dose adjustment for many drugs." },
       { type:"formula", label:"Cockcroft-Gault", lines:["CrCl = [(140 − age) × weight (kg)] / [72 × SCr (mg/dL)] × 0.85 for females"] },
@@ -835,7 +853,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"1.3", section:"Basic Biomedical Sciences", title:"Acid-Base Balance", color:"#3b82f6",
+    id:"1.3", section:"Basic Biomedical Sciences", title:"Acid-Base Balance", color:"#2B5FA6",
     blocks:[
       { type:"text", content:"Acid-base balance maintains arterial pH at 7.35–7.45. The body uses chemical buffers, the lungs (CO₂ excretion), and the kidneys (HCO₃⁻ regulation) to maintain this narrow range." },
       { type:"formula", label:"Normal Values", lines:["pH 7.35–7.45", "PaCO₂ 35–45 mmHg", "PaO₂ 80–100 mmHg", "HCO₃⁻ 22–26 mEq/L"] },
@@ -850,7 +868,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"1.4", section:"Basic Biomedical Sciences", title:"Enzyme Kinetics (Michaelis-Menten)", color:"#3b82f6",
+    id:"1.4", section:"Basic Biomedical Sciences", title:"Enzyme Kinetics (Michaelis-Menten)", color:"#2B5FA6",
     blocks:[
       { type:"text", content:"Michaelis-Menten kinetics describes how enzyme reaction rate depends on substrate concentration. This is foundational for understanding drug metabolism and enzyme inhibitor pharmacology." },
       { type:"formula", label:"Equation", lines:["V = Vmax × [S] / (Km + [S])", "Km = [S] at ½ Vmax", "Lower Km = higher enzyme affinity"] },
@@ -864,7 +882,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"1.5", section:"Basic Biomedical Sciences", title:"Microbiology & Gram Stain", color:"#3b82f6",
+    id:"1.5", section:"Basic Biomedical Sciences", title:"Microbiology & Gram Stain", color:"#2B5FA6",
     blocks:[
       { type:"text", content:"Bacterial classification by Gram stain guides empirical antibiotic selection. The differential staining reflects fundamental cell wall structure differences with major clinical implications." },
       { type:"table", headers:["Feature","Gram-Positive (+)","Gram-Negative (−)"], rows:[
@@ -879,7 +897,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"1.6", section:"Basic Biomedical Sciences", title:"Immunology — Antibodies & Hypersensitivity", color:"#3b82f6",
+    id:"1.6", section:"Basic Biomedical Sciences", title:"Immunology — Antibodies & Hypersensitivity", color:"#2B5FA6",
     blocks:[
       { type:"text", content:"The adaptive immune system uses antibodies (immunoglobulins) and T cells to recognize and eliminate pathogens. Dysregulated responses cause hypersensitivity reactions, the foundation of many drug allergies and autoimmune diseases." },
       { type:"table", headers:["Class","% of Serum","Key Property","Clinical Significance"], rows:[
@@ -898,7 +916,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"2.1", section:"Pharmaceutical Sciences", title:"Pharmacokinetics — ADME Overview", color:"#10b981",
+    id:"2.1", section:"Pharmaceutical Sciences", title:"Pharmacokinetics — ADME Overview", color:"#1A7A5E",
     blocks:[
       { type:"text", content:"Pharmacokinetics describes what the body does to the drug: Absorption, Distribution, Metabolism, Excretion (ADME). Mastering these concepts is essential for dosing, predicting drug interactions, and managing toxicity." },
       { type:"formula", label:"Bioavailability (F)", lines:["F = fraction of dose reaching systemic circulation","IV F = 100% by definition","Oral F reduced by GI degradation, P-gp efflux, and first-pass hepatic metabolism"] },
@@ -914,7 +932,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"2.2", section:"Pharmaceutical Sciences", title:"CYP450 Drug Metabolism", color:"#10b981",
+    id:"2.2", section:"Pharmaceutical Sciences", title:"CYP450 Drug Metabolism", color:"#1A7A5E",
     blocks:[
       { type:"text", content:"The Cytochrome P450 (CYP450) enzyme family metabolizes most drugs in the liver. Understanding CYP inhibitors and inducers predicts the majority of clinically significant drug-drug interactions." },
       { type:"table", headers:["Enzyme","% Drug Metabolism","Major Inhibitors","Major Inducers"], rows:[
@@ -929,7 +947,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"2.3", section:"Pharmaceutical Sciences", title:"Volume of Distribution & Drug Distribution", color:"#10b981",
+    id:"2.3", section:"Pharmaceutical Sciences", title:"Volume of Distribution & Drug Distribution", color:"#1A7A5E",
     blocks:[
       { type:"text", content:"Volume of Distribution (Vd) is a theoretical volume describing how extensively a drug distributes throughout the body. Vd predicts loading doses and explains why some drugs persist despite low plasma levels." },
       { type:"formula", label:"Vd Formula", lines:["Vd = Dose / Cp(initial)", "Units: L or L/kg", "Large Vd → drug sequestered in tissues"] },
@@ -943,7 +961,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"2.4", section:"Pharmaceutical Sciences", title:"Pharmacodynamics & Receptor Theory", color:"#10b981",
+    id:"2.4", section:"Pharmaceutical Sciences", title:"Pharmacodynamics & Receptor Theory", color:"#1A7A5E",
     blocks:[
       { type:"table", headers:["Term","Definition","Example"], rows:[
         ["Full agonist","Maximum receptor response (100% efficacy)","Morphine at mu-opioid"],
@@ -962,7 +980,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"2.5", section:"Pharmaceutical Sciences", title:"Toxicology & Antidotes", color:"#10b981",
+    id:"2.5", section:"Pharmaceutical Sciences", title:"Toxicology & Antidotes", color:"#1A7A5E",
     blocks:[
       { type:"text", content:"Recognizing toxidromes and administering antidotes early can be life-saving. Memorize the major antidotes — they are extremely high-yield on SPLE." },
       { type:"table", headers:["Toxin","Antidote","Critical Notes"], rows:[
@@ -984,7 +1002,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"3.1", section:"Social/Behavioral/Administrative Sciences", title:"Biomedical Ethics — Four Principles", color:"#8b5cf6",
+    id:"3.1", section:"Social/Behavioral/Administrative Sciences", title:"Biomedical Ethics — Four Principles", color:"#7C4BA0",
     blocks:[
       { type:"table", headers:["Principle","Definition","Example","Common Conflict"], rows:[
         ["Autonomy","Respect patient's right to decide","Honoring refusal of treatment","vs Beneficence — refusing life-saving treatment"],
@@ -997,7 +1015,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"3.2", section:"Social/Behavioral/Administrative Sciences", title:"KSA Pharmacy Law & Regulation", color:"#8b5cf6",
+    id:"3.2", section:"Social/Behavioral/Administrative Sciences", title:"KSA Pharmacy Law & Regulation", color:"#7C4BA0",
     blocks:[
       { type:"table", headers:["Authority","Role"], rows:[
         ["SFDA (Saudi FDA)","Drug registration; GMP inspection; pharmacovigilance; recalls"],
@@ -1012,7 +1030,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"3.3", section:"Social/Behavioral/Administrative Sciences", title:"Pharmacoeconomics & Health Outcomes", color:"#8b5cf6",
+    id:"3.3", section:"Social/Behavioral/Administrative Sciences", title:"Pharmacoeconomics & Health Outcomes", color:"#7C4BA0",
     blocks:[
       { type:"table", headers:["Analysis","Outcome Measure","When to Use"], rows:[
         ["CMA (Cost-Minimization)","Cost only — outcomes assumed equal","Generic substitution; proven equivalence"],
@@ -1025,7 +1043,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.1", section:"Clinical Sciences", title:"Therapeutic Drug Monitoring (TDM)", color:"#ef4444",
+    id:"4.1", section:"Clinical Sciences", title:"Therapeutic Drug Monitoring (TDM)", color:"#B83B2A",
     blocks:[
       { type:"text", content:"TDM is essential for narrow-therapeutic-index drugs with high inter-patient PK variability. Measuring plasma levels prevents toxicity and ensures efficacy." },
       { type:"formula", label:"When TDM is Needed", lines:["Narrow TI + high PK variability + clear concentration-effect relationship + established target range"] },
@@ -1042,7 +1060,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.2", section:"Clinical Sciences", title:"Pregnancy & Lactation", color:"#ef4444",
+    id:"4.2", section:"Clinical Sciences", title:"Pregnancy & Lactation", color:"#B83B2A",
     blocks:[
       { type:"text", content:"Pregnancy alters drug pharmacokinetics: ↑ Vd from increased plasma volume, ↑ renal clearance, ↑ hepatic metabolism. Most importantly, drugs can cross the placenta and harm the fetus." },
       { type:"table", headers:["FDA Category","Meaning","Examples"], rows:[
@@ -1057,7 +1075,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.3", section:"Clinical Sciences", title:"Pediatric Pharmacotherapy", color:"#ef4444",
+    id:"4.3", section:"Clinical Sciences", title:"Pediatric Pharmacotherapy", color:"#B83B2A",
     blocks:[
       { type:"text", content:"Children are NOT small adults. Hepatic enzymes mature gradually, renal function develops over 12 months, and body composition differs. Always use weight-based dosing (mg/kg) AND verify against max adult dose." },
       { type:"table", headers:["Drug","Restriction","Reason"], rows:[
@@ -1073,7 +1091,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.4", section:"Clinical Sciences", title:"Hypertension Management", color:"#ef4444",
+    id:"4.4", section:"Clinical Sciences", title:"Hypertension Management", color:"#B83B2A",
     blocks:[
       { type:"text", content:"Hypertension affects 1 in 4 adults and is a major risk factor for stroke, MI, HF, and CKD. Target BP per AHA/ACC 2017: <130/80 in most adults. Diabetes/CKD: <130/80." },
       { type:"table", headers:["Class","First-line For","Avoid In"], rows:[
@@ -1088,7 +1106,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.5", section:"Clinical Sciences", title:"Type 2 Diabetes Mellitus", color:"#ef4444",
+    id:"4.5", section:"Clinical Sciences", title:"Type 2 Diabetes Mellitus", color:"#B83B2A",
     blocks:[
       { type:"table", headers:["Drug","Mechanism","Key Benefit","Key Warning"], rows:[
         ["Metformin","↓ Hepatic gluconeogenesis","First-line; weight neutral; CV safe","Stop at CrCl <30 (lactic acidosis); hold before contrast"],
@@ -1104,7 +1122,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.6", section:"Clinical Sciences", title:"Antibiotic Selection by Pathogen", color:"#ef4444",
+    id:"4.6", section:"Clinical Sciences", title:"Antibiotic Selection by Pathogen", color:"#B83B2A",
     blocks:[
       { type:"table", headers:["Pathogen","First-line","Alternative","Notes"], rows:[
         ["MSSA","Cloxacillin / Nafcillin / Cefazolin","Clindamycin","NOT Amoxicillin alone (beta-lactamase)"],
@@ -1120,7 +1138,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.7", section:"Clinical Sciences", title:"Anticoagulation Therapy", color:"#ef4444",
+    id:"4.7", section:"Clinical Sciences", title:"Anticoagulation Therapy", color:"#B83B2A",
     blocks:[
       { type:"table", headers:["Drug","Mechanism","Monitoring","Reversal"], rows:[
         ["UFH (Heparin)","Activates Antithrombin III → ↓ IIa, Xa","aPTT (target 60–90s)","Protamine Sulfate"],
@@ -1134,7 +1152,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.8", section:"Clinical Sciences", title:"Asthma & COPD Management", color:"#ef4444",
+    id:"4.8", section:"Clinical Sciences", title:"Asthma & COPD Management", color:"#B83B2A",
     blocks:[
       { type:"text", content:"Asthma is reversible airway inflammation triggered by allergens/exercise. COPD is irreversible airflow limitation from smoking. Both share bronchodilator therapy but differ in steroid responsiveness and prognosis." },
       { type:"table", headers:["GINA Step","Severity","Preferred Controller","Reliever"], rows:[
@@ -1154,7 +1172,7 @@ const STUDY_LESSONS = [
     ]
   },
   {
-    id:"4.9", section:"Clinical Sciences", title:"Major Drug-Drug Interactions", color:"#ef4444",
+    id:"4.9", section:"Clinical Sciences", title:"Major Drug-Drug Interactions", color:"#B83B2A",
     blocks:[
       { type:"table", headers:["Object Drug","Precipitant","Effect","Action"], rows:[
         ["Warfarin","Rifampicin","↓ INR → thrombosis","↑ Warfarin dose; monitor INR"],
@@ -1186,8 +1204,8 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
   const [showExp, setShowExp] = useState(false);
   const [sectionQuestions, setSectionQuestions] = useState([]);
 
-  const secColors = { "Basic Biomedical Sciences":"#3b82f6","Pharmaceutical Sciences":"#10b981","Social/Behavioral/Administrative Sciences":"#8b5cf6","Clinical Sciences":"#ef4444" };
-  const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
+  const secColors = { "Basic Biomedical Sciences":"#2B5FA6","Pharmaceutical Sciences":"#1A7A5E","Social/Behavioral/Administrative Sciences":"#7C4BA0","Clinical Sciences":"#B83B2A" };
+  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
   const grouped = {};
   STUDY_LESSONS.forEach(l => { if(!grouped[l.section]) grouped[l.section]=[]; grouped[l.section].push(l); });
   const sections = Object.keys(grouped);
@@ -1234,25 +1252,25 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
     }
   };
 
-  const color = activeSection ? (secColors[activeSection] || "#3b82f6") : "#3b82f6";
+  const color = activeSection ? (secColors[activeSection] || "#2B5FA6") : "#2B5FA6";
 
   // ── PHASE: LIST ─────────────────────────────────────────────
   if (phase === "list") return (
-    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
-      <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.08)", padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
+      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
         <button onClick={onBack} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Dashboard</button>
         <div style={{ fontWeight:800, fontSize:16 }}>📚 Study Materials</div>
-        <div style={{ marginLeft:"auto", color:"#64748b", fontSize:12 }}>{STUDY_LESSONS.length} Lessons</div>
+        <div style={{ marginLeft:"auto", color:"#8C7B6E", fontSize:12 }}>{STUDY_LESSONS.length} Lessons</div>
       </div>
       <div style={{ maxWidth:720, margin:"0 auto", padding:24 }}>
         <div style={{ ...S.card, marginBottom:24, background:"rgba(16,185,129,0.06)", border:"1px solid rgba(16,185,129,0.3)" }}>
           <div style={{ display:"flex", gap:14, alignItems:"center" }}>
             <div style={{ fontSize:36 }}>📖</div>
             <div>
-              <div style={{ fontWeight:800, fontSize:16, color:"#10b981" }}>SPLE Study Material</div>
-              <div style={{ color:"#64748b", fontSize:13, marginTop:4 }}>اختر قسماً للبدء — ستظهر دروس القسم ثم أسئلة تطبيقية</div>
+              <div style={{ fontWeight:800, fontSize:16, color:"#1A7A5E" }}>SPLE Study Material</div>
+              <div style={{ color:"#8C7B6E", fontSize:13, marginTop:4 }}>اختر قسماً للبدء — ستظهر دروس القسم ثم أسئلة تطبيقية</div>
               <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
-                {[["10%","Basic Biomedical","#3b82f6"],["35%","Pharmaceutical","#10b981"],["20%","Social/Admin","#8b5cf6"],["35%","Clinical","#ef4444"]].map(([pct,label,c])=>(
+                {[["10%","Basic Biomedical","#2B5FA6"],["35%","Pharmaceutical","#1A7A5E"],["20%","Social/Admin","#7C4BA0"],["35%","Clinical","#B83B2A"]].map(([pct,label,c])=>(
                   <span key={label} style={{ background:c+"18", color:c, fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:20 }}>{pct} {label}</span>
                 ))}
               </div>
@@ -1272,7 +1290,7 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:800, fontSize:15, color:c }}>{section}</div>
-                  <div style={{ color:"#64748b", fontSize:12, marginTop:3 }}>{lessons.length} lessons · {lessons.map(l=>l.title).slice(0,2).join(", ")}{lessons.length>2?` +${lessons.length-2} more`:""}</div>
+                  <div style={{ color:"#8C7B6E", fontSize:12, marginTop:3 }}>{lessons.length} lessons · {lessons.map(l=>l.title).slice(0,2).join(", ")}{lessons.length>2?` +${lessons.length-2} more`:""}</div>
                 </div>
                 <div style={{ textAlign:"right" }}>
                   <div style={{ background:c+"22", color:c, fontSize:11, fontWeight:700, padding:"4px 10px", borderRadius:20 }}>{BLUEPRINT[section]?.pct}% of SPLE</div>
@@ -1297,43 +1315,43 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
 
       const renderBlock = (block, i) => {
         if (block.type === "text") return (
-          <p key={i} style={{ color:"#cbd5e1", fontSize:14, lineHeight:1.8, margin:"0 0 16px" }}>{block.content}</p>
+          <p key={i} style={{ color:T.ink2, fontSize:14.5, lineHeight:1.9, margin:"0 0 18px", fontFamily:"Georgia, serif" }}>{block.content}</p>
         );
         if (block.type === "formula") return (
-          <div key={i} style={{ background:color+"12", border:`1px solid ${color}44`, borderRadius:12, padding:"14px 18px", marginBottom:16 }}>
-            <div style={{ color:color, fontWeight:700, fontSize:12, marginBottom:10, textTransform:"uppercase", letterSpacing:1 }}>{block.label}</div>
+          <div key={i} style={{ background:color+"14", border:`1.5px solid ${color}44`, borderRadius:10, padding:"14px 18px", marginBottom:18 }}>
+            <div style={{ color:color, fontWeight:700, fontSize:11, marginBottom:10, textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:"system-ui,sans-serif" }}>{block.label}</div>
             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
               {block.lines.map((line,j)=>(
-                <div key={j} style={{ background:"rgba(0,0,0,0.25)", borderRadius:8, padding:"8px 14px", fontFamily:"monospace", fontSize:13, color:"#f1f5f9", fontWeight:600 }}>{line}</div>
+                <div key={j} style={{ background:T.bg3, borderRadius:7, padding:"9px 14px", fontFamily:"'Courier New', monospace", fontSize:13, color:T.ink, fontWeight:600, border:`1px solid ${T.border}` }}>{line}</div>
               ))}
             </div>
           </div>
         );
         if (block.type === "alert") return (
-          <div key={i} style={{ background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.35)", borderRadius:12, padding:"14px 18px", marginBottom:16, display:"flex", gap:12 }}>
+          <div key={i} style={{ background:"rgba(196,122,30,0.08)", border:"1.5px solid rgba(196,122,30,0.35)", borderRadius:10, padding:"14px 18px", marginBottom:18, display:"flex", gap:12 }}>
             <span style={{ fontSize:18, flexShrink:0 }}>💡</span>
             <div>
-              <div style={{ color:"#f59e0b", fontWeight:700, fontSize:13, marginBottom:4 }}>{block.label}</div>
-              <div style={{ color:"#fde68a", fontSize:13, lineHeight:1.7 }}>{block.content}</div>
+              <div style={{ color:T.gold, fontWeight:700, fontSize:13, marginBottom:4, fontFamily:"system-ui,sans-serif" }}>{block.label}</div>
+              <div style={{ color:T.ink2, fontSize:13.5, lineHeight:1.7, fontFamily:"Georgia, serif" }}>{block.content}</div>
             </div>
           </div>
         );
         if (block.type === "table") return (
-          <div key={i} style={{ marginBottom:16, borderRadius:12, overflow:"hidden", border:"1px solid rgba(255,255,255,0.1)" }}>
+          <div key={i} style={{ marginBottom:20, borderRadius:10, overflow:"hidden", border:`1.5px solid ${T.border}`, boxShadow:T.shadow }}>
             <div style={{ overflowX:"auto" }}>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13.5, fontFamily:"system-ui,sans-serif" }}>
                 <thead>
-                  <tr style={{ background:color+"22" }}>
+                  <tr style={{ background:color+"18" }}>
                     {block.headers.map((h,j)=>(
-                      <th key={j} style={{ padding:"10px 14px", textAlign:"left", color:color, fontWeight:700, borderBottom:`1px solid ${color}33`, whiteSpace:"nowrap", fontSize:12 }}>{h}</th>
+                      <th key={j} style={{ padding:"11px 15px", textAlign:"left", color:color, fontWeight:700, borderBottom:`2px solid ${color}33`, whiteSpace:"nowrap", fontSize:12, textTransform:"uppercase", letterSpacing:"0.05em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {block.rows.map((row,j)=>(
-                    <tr key={j} style={{ borderBottom:"1px solid rgba(255,255,255,0.06)", background:j%2===0?"rgba(255,255,255,0.02)":"transparent" }}>
+                    <tr key={j} style={{ borderBottom:`1px solid ${T.border}`, background:j%2===0?T.surface:T.bg }}>
                       {row.map((cell,k)=>(
-                        <td key={k} style={{ padding:"10px 14px", color:k===0?"#f1f5f9":"#94a3b8", fontWeight:k===0?600:400, lineHeight:1.5, fontSize:13 }}>{cell}</td>
+                        <td key={k} style={{ padding:"10px 15px", color:k===0?T.ink:T.ink2, fontWeight:k===0?600:400, lineHeight:1.6, fontSize:13 }}>{cell}</td>
                       ))}
                     </tr>
                   ))}
@@ -1346,29 +1364,36 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
       };
 
       return (
-        <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
-          <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:`1px solid ${color}33`, padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:T.ink }}>
+          <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"12px 24px", display:"flex", alignItems:"center", gap:12, boxShadow:T.shadow }}>
             <button onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(lessonIdx-1); setActiveLesson(lessons[lessonIdx-1]); setSectionPhase("lesson"); }}} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Back</button>
             <div>
-              <div style={{ color:color, fontWeight:800, fontSize:14 }}>Lesson {l.id}: {l.title}</div>
-              <div style={{ color:"#475569", fontSize:11 }}>{l.section}</div>
+              <div style={{ color:color, fontWeight:800, fontSize:14, fontFamily:"system-ui,sans-serif" }}>Lesson {l.id}: {l.title}</div>
+              <div style={{ color:T.ink3, fontSize:11, fontFamily:"system-ui,sans-serif" }}>{l.section}</div>
             </div>
-            <div style={{ marginLeft:"auto", color:"#475569", fontSize:12 }}>{lessonIdx+1} / {lessons.length}</div>
+            <div style={{ marginLeft:"auto", color:T.ink3, fontSize:12, fontFamily:"system-ui,sans-serif" }}>{lessonIdx+1} / {lessons.length}</div>
           </div>
-          <div style={{ height:3, background:"rgba(255,255,255,0.06)" }}>
+          <div style={{ height:3, background:T.bg2 }}>
             <div style={{ width:`${((lessonIdx+1)/lessons.length)*100}%`, height:"100%", background:color, transition:"width 0.4s" }} />
           </div>
           <div style={{ maxWidth:800, margin:"0 auto", padding:"24px 24px 40px" }}>
             {/* Lesson header like PDF */}
             <div style={{ borderBottom:`2px solid ${color}`, paddingBottom:12, marginBottom:24 }}>
               <div style={{ color:color, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:2, marginBottom:4 }}>{l.section}</div>
-              <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:"#f1f5f9" }}>Lesson {l.id}: {l.title}</h2>
+              <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:T.ink }}>Lesson {l.id}: {l.title}</h2>
             </div>
             {/* Render all blocks */}
             {l.blocks.map((block, i) => renderBlock(block, i))}
-            <div style={{ marginTop:24 }}>
-              <button onClick={goNextLesson} style={{ ...S.btn(color), width:"100%", padding:14, fontSize:15 }}>
-                {isLastLesson ? `✅ Finish — Start Practice Questions →` : `Next: ${lessons[lessonIdx+1]?.title} →`}
+            {/* Navigation — Back right, Next left, centered */}
+            <div style={{ marginTop:32, display:"flex", justifyContent:"center", alignItems:"center", gap:16 }}>
+              <button
+                onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(lessonIdx-1); setActiveLesson(lessons[lessonIdx-1]); setSectionPhase("lesson"); }}}
+                style={{ ...S.ghost, padding:"12px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
+                ← {lessonIdx===0 ? "Sections" : "Previous"}
+              </button>
+              <div style={{ color:T.ink3, fontSize:12, fontFamily:"system-ui,sans-serif" }}>{lessonIdx+1} / {lessons.length}</div>
+              <button onClick={goNextLesson} style={{ ...S.btn(color), padding:"12px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
+                {isLastLesson ? "Start Practice Questions ✅" : `Next →`}
               </button>
             </div>
           </div>
@@ -1380,54 +1405,54 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
         const q = sectionQuestions[cur];
         if (!q) {
           return (
-            <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, padding:24 }}>
+            <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, padding:24 }}>
               <div style={{ fontSize:48 }}>📭</div>
               <div style={{ fontWeight:700, fontSize:18, textAlign:"center" }}>No questions uploaded for this section yet</div>
-              <p style={{ color:"#64748b", textAlign:"center", maxWidth:400 }}>ارفع أسئلة من صفحة Questions أو ابدأ Study Session الكاملة</p>
+              <p style={{ color:"#8C7B6E", textAlign:"center", maxWidth:400 }}>ارفع أسئلة من صفحة Questions أو ابدأ Study Session الكاملة</p>
               <div style={{ display:"flex", gap:12 }}>
                 <button onClick={()=>setPhase("list")} style={{ ...S.ghost, padding:"10px 20px" }}>← Back to Sections</button>
-                <button onClick={onStartStudy} style={{ ...S.btn("#10b981"), padding:"10px 20px" }}>📝 Start Full Study Session →</button>
+                <button onClick={onStartStudy} style={{ ...S.btn("#1A7A5E"), padding:"10px 20px" }}>📝 Start Full Study Session →</button>
               </div>
             </div>
           );
         }
         const answered = answers[q.id] !== undefined;
         const correct = answers[q.id] === q.answer;
-        const col = SC[q.section] || { accent:color, bg:"#1e2a3a" };
+        const col = SC[q.section] || { accent:color, bg:T.bg };
         const next = () => {
           setShowExp(false);
           if (cur < sectionQuestions.length-1) setCur(p=>p+1);
           else setPhase("list");
         };
         return (
-          <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
-            <div style={{ background:col.bg||"#1e2a3a", borderBottom:`1px solid ${color}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
+            <div style={{ background:col.bg||T.bg, borderBottom:`1px solid ${color}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>← Lessons</button>
-                <span style={{ color:"#94a3b8", fontSize:13 }}>Practice Q {cur+1}/{sectionQuestions.length}</span>
+                <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>← Lessons</button>
+                <span style={{ color:"#8C7B6E", fontSize:13 }}>Practice Q {cur+1}/{sectionQuestions.length}</span>
               </div>
               <span style={{ background:color+"22", color:color, fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📝 {activeSection.split(" ")[0]} Questions</span>
-              <span style={{ color:diffCol[q.difficulty]||"#f59e0b", fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
+              <span style={{ color:diffCol[q.difficulty]||"#C47A1E", fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
             </div>
-            <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/sectionQuestions.length)*100}%`, height:"100%", background:color, transition:"width 0.3s" }} /></div>
+            <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/sectionQuestions.length)*100}%`, height:"100%", background:color, transition:"width 0.3s" }} /></div>
             <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
               <div style={{ color:color, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
               <div style={{ ...S.card, border:`1px solid ${color}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
               <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
                 {q.options.map((opt,i)=>{
-                  let bg="rgba(255,255,255,0.04)",border="1px solid rgba(255,255,255,0.1)",c="#e2e8f0";
-                  if(answered){ if(i===q.answer){bg="rgba(34,197,94,0.12)";border="1.5px solid #22c55e";c="#86efac";} else if(i===answers[q.id]){bg="rgba(239,68,68,0.12)";border="1.5px solid #ef4444";c="#fca5a5";} }
-                  return <button key={i} onClick={()=>{ if(!answered){setAnswers(p=>({...p,[q.id]:i})); setShowExp(true);}}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
-                    <span style={{ width:26,height:26,borderRadius:7,background:"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
+                  let bg="rgba(140,110,80,0.05)",border=`1px solid ${T.border}`,c=T.ink;
+                  if(answered){ if(i===q.answer){bg="rgba(26,122,94,0.12)";border="1.5px solid #1A7A5E";c="#1A7A5E";} else if(i===answers[q.id]){bg="rgba(184,59,42,0.10)";border="1.5px solid #B83B2A";c="#B83B2A";} }
+                  return <button key={i} onClick={()=>{ if(!answered){setAnswers(p=>({...p,[q.id]:i})); setShowExp(true);}}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c||T.ink,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
+                    <span style={{ width:26,height:26,borderRadius:7,background:T.bg3,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
                     {opt}
                     {answered&&i===q.answer&&<span style={{ marginLeft:"auto" }}>✓</span>}
                     {answered&&i===answers[q.id]&&i!==q.answer&&<span style={{ marginLeft:"auto" }}>✗</span>}
                   </button>;
                 })}
               </div>
-              {showExp && <div style={{ background:correct?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1px solid ${correct?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
-                <div style={{ fontWeight:700, marginBottom:6, color:correct?"#86efac":"#fca5a5", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-                <p style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation||"No explanation provided."}</p>
+              {showExp && <div style={{ background:correct?"rgba(26,122,94,0.10)":"rgba(184,59,42,0.08)", border:`1px solid ${correct?"rgba(26,122,94,0.35)":"rgba(184,59,42,0.30)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
+                <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
+                <p style={{ color:T.ink2, fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation||"No explanation provided."}</p>
               </div>}
               {answered && <button onClick={next} style={{ ...S.btn(color), width:"100%", padding:13 }}>
                 {cur<sectionQuestions.length-1?"Next Question →":"🏁 Done — Back to Sections"}
@@ -1448,45 +1473,45 @@ function StudyScreen({ questions, onFinish, onHome }) {
   const q = questions[cur];
   const answered = answers[q.id] !== undefined;
   const correct = answers[q.id] === q.answer;
-  const col = SC[q.section] || { accent:"#10b981", bg:"#1e4a3a" };
-  const diffCol = { "سهل":"#22c55e", "متوسط":"#f59e0b", "صعب":"#ef4444" };
+  const col = SC[q.section] || { accent:"#1A7A5E", bg:T.bg };
+  const diffCol = { "سهل":"#1A7A5E", "متوسط":"#C47A1E", "صعب":"#B83B2A" };
   const next = () => { setShowExp(false); if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
   const prev = () => { setShowExp(false); if (cur > 0) setCur(p=>p-1); };
 
   return (
-    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
-      <div style={{ background:col.bg||"#1e4a3a", borderBottom:"1px solid #10b98144", padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
+      <div style={{ background:col.bg||T.bg, borderBottom:"1px solid #10b98144", padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <button onClick={onHome} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
-          {cur > 0 && <button onClick={prev} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>← Back</button>}
+          <button onClick={onHome} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
+          {cur > 0 && <button onClick={prev} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>← Back</button>}
         </div>
-        <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📚 Study · Q {cur+1}/{questions.length}</span>
+        <span style={{ background:"rgba(16,185,129,0.15)", color:"#1A7A5E", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📚 Study · Q {cur+1}/{questions.length}</span>
         <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
       </div>
-      <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:"#10b981", transition:"width 0.3s" }} /></div>
+      <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:"#1A7A5E", transition:"width 0.3s" }} /></div>
       <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
-        <div style={{ color:"#10b981", fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
+        <div style={{ color:"#1A7A5E", fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
         <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.2)", marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
         <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
           {q.options.map((opt,i) => {
-            let bg="rgba(255,255,255,0.04)", border="1px solid rgba(255,255,255,0.1)", c="#e2e8f0";
+            let bg="rgba(140,110,80,0.05)", border=`1px solid ${T.border}`, c=T.ink;
             if (answered) {
-              if (i === q.answer) { bg="rgba(34,197,94,0.12)"; border="1.5px solid #22c55e"; c="#86efac"; }
-              else if (i === answers[q.id]) { bg="rgba(239,68,68,0.12)"; border="1.5px solid #ef4444"; c="#fca5a5"; }
+              if (i === q.answer) { bg="rgba(26,122,94,0.12)"; border="1.5px solid #1A7A5E"; c="#1A7A5E"; }
+              else if (i === answers[q.id]) { bg="rgba(184,59,42,0.10)"; border="1.5px solid #B83B2A"; c="#B83B2A"; }
             }
-            return <button key={i} onClick={()=>{ if(!answered){ setAnswers(p=>({...p,[q.id]:i})); setShowExp(true); }}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
-              <span style={{ width:26,height:26,borderRadius:7,background:"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
+            return <button key={i} onClick={()=>{ if(!answered){ setAnswers(p=>({...p,[q.id]:i})); setShowExp(true); }}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c||T.ink,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
+              <span style={{ width:26,height:26,borderRadius:7,background:T.bg3,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
               {opt}
               {answered && i===q.answer && <span style={{ marginLeft:"auto" }}>✓</span>}
               {answered && i===answers[q.id] && i!==q.answer && <span style={{ marginLeft:"auto" }}>✗</span>}
             </button>;
           })}
         </div>
-        {showExp && <div style={{ background:correct?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1px solid ${correct?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
-          <div style={{ fontWeight:700, marginBottom:6, color:correct?"#86efac":"#fca5a5", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-          <p style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation || "No explanation provided."}</p>
+        {showExp && <div style={{ background:correct?"rgba(26,122,94,0.10)":"rgba(184,59,42,0.08)", border:`1px solid ${correct?"rgba(26,122,94,0.35)":"rgba(184,59,42,0.30)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
+          <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
+          <p style={{ color:T.ink2, fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation || "No explanation provided."}</p>
         </div>}
-        {answered && <button onClick={next} style={{ ...S.btn("#10b981"), width:"100%", padding:13 }}>{cur<questions.length-1?"Next →":"🏁 Finish Study Session"}</button>}
+        {answered && <button onClick={next} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:13 }}>{cur<questions.length-1?"Next →":"🏁 Finish Study Session"}</button>}
       </div>
     </div>
   );
@@ -1512,34 +1537,34 @@ function ExamScreen({ questions, onFinish, timeMins }) {
   const s = secsLeft % 60;
   const timeStr = h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
   const timePct = secsLeft / ((timeMins || 120) * 60);
-  const timerColor = timePct > 0.25 ? "#22c55e" : timePct > 0.1 ? "#f59e0b" : "#ef4444";
+  const timerColor = timePct > 0.25 ? "#1A7A5E" : timePct > 0.1 ? "#C47A1E" : "#B83B2A";
 
   const q = questions[cur];
   const answered = answers[q.id] !== undefined;
-  const col = SC[q.section] || { accent:"#3b82f6", bg:"#1e3a5f" };
-  const diffCol = { "سهل":"#22c55e", "متوسط":"#f59e0b", "صعب":"#ef4444" };
+  const col = SC[q.section] || { accent:"#2B5FA6", bg:T.bg };
+  const diffCol = { "سهل":"#1A7A5E", "متوسط":"#C47A1E", "صعب":"#B83B2A" };
   const next = () => { if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
 
   return (
-    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
       <div style={{ background:col.bg, borderBottom:`1px solid ${col.accent}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <span style={{ color:"#94a3b8", fontSize:13 }}>🎯 Exam · Q {cur+1}/{questions.length}</span>
+        <span style={{ color:"#8C7B6E", fontSize:13 }}>🎯 Exam · Q {cur+1}/{questions.length}</span>
         <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(0,0,0,0.3)", borderRadius:8, padding:"5px 12px" }}>
           <span style={{ fontSize:14 }}>⏱️</span>
           <span style={{ color:timerColor, fontWeight:800, fontSize:15, fontFamily:"monospace" }}>{timeStr}</span>
         </div>
         <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
       </div>
-      <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} /></div>
-      <div style={{ height:3, background:"rgba(255,255,255,0.05)" }}><div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} /></div>
+      <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} /></div>
+      <div style={{ height:3, background:T.surface }}><div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} /></div>
       <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
         <div style={{ color:col.accent, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
         <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
         <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
           {q.options.map((opt,i) => {
             const selected = answers[q.id] === i;
-            return <button key={i} onClick={()=>setAnswers(p=>({...p,[q.id]:i}))} style={{ background:selected?"rgba(59,130,246,0.15)":"rgba(255,255,255,0.04)", border:selected?`1.5px solid ${col.accent}`:"1px solid rgba(255,255,255,0.1)", borderRadius:11, padding:"12px 16px", cursor:"pointer", textAlign:"left", color:selected?"#93c5fd":"#e2e8f0", fontSize:13, display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ width:26,height:26,borderRadius:7,background:selected?col.accent+"33":"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:selected?col.accent:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
+            return <button key={i} onClick={()=>setAnswers(p=>({...p,[q.id]:i}))} style={{ background:selected?"rgba(59,130,246,0.15)":"rgba(140,110,80,0.05)", border:selected?`1.5px solid ${col.accent}`:`1px solid ${T.border}`, borderRadius:11, padding:"12px 16px", cursor:"pointer", textAlign:"left", color:selected?"#2B5FA6":T.ink, fontSize:13, display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ width:26,height:26,borderRadius:7,background:selected?col.accent+"33":"rgba(140,110,80,0.10)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:selected?col.accent:"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
               {opt}
               {selected && <span style={{ marginLeft:"auto", color:col.accent }}>●</span>}
             </button>;
@@ -1556,25 +1581,25 @@ function ExamScreen({ questions, onFinish, timeMins }) {
 function ResultsScreen({ questions, answers, onRetry, onHome, userName, mode }) {
   const correct=questions.filter(q=>answers[q.id]===q.answer).length;
   const score=Math.round((correct/questions.length)*100);
-  const grade=score>=85?{label:"Excellent",color:"#22c55e",emoji:"🏆"}:score>=70?{label:"Good",color:"#3b82f6",emoji:"🎯"}:score>=60?{label:"Pass",color:"#f59e0b",emoji:"📈"}:{label:"Needs Review",color:"#ef4444",emoji:"📚"};
+  const grade=score>=85?{label:"Excellent",color:"#1A7A5E",emoji:"🏆"}:score>=70?{label:"Good",color:"#2B5FA6",emoji:"🎯"}:score>=60?{label:"Pass",color:"#C47A1E",emoji:"📈"}:{label:"Needs Review",color:"#B83B2A",emoji:"📚"};
   const circ=2*Math.PI*52;
   const bySection=SECTIONS.reduce((acc,sec)=>{ const qs=questions.filter(q=>q.section===sec); if(!qs.length) return acc; const c=qs.filter(q=>answers[q.id]===q.answer).length; acc[sec]={total:qs.length,correct:c,pct:Math.round(c/qs.length*100)}; return acc; },{});
   const isExam = mode === "exam" || !mode;
   return (
-    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", padding:24 }}>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", padding:24 }}>
       <div style={{ maxWidth:600, margin:"0 auto" }}>
         <h2 style={{ textAlign:"center", fontSize:22, fontWeight:800, marginBottom:4 }}>{isExam ? "🎯 Exam Complete!" : "📚 Study Session Complete!"}</h2>
-        {userName&&<p style={{ textAlign:"center", color:"#64748b", marginBottom:20 }}>Great effort, {userName}!</p>}
+        {userName&&<p style={{ textAlign:"center", color:"#8C7B6E", marginBottom:20 }}>Great effort, {userName}!</p>}
         <div style={{ display:"flex", justifyContent:"center", marginBottom:20 }}>
           <div style={{ ...S.card, textAlign:"center", minWidth:260 }}>
             <svg width="110" height="110" viewBox="0 0 120 120" style={{ marginBottom:10 }}>
-              <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="10"/>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(140,110,80,0.10)" strokeWidth="10"/>
               <circle cx="60" cy="60" r="52" fill="none" stroke={grade.color} strokeWidth="10" strokeDasharray={circ} strokeDashoffset={circ-(score/100)*circ} strokeLinecap="round" transform="rotate(-90 60 60)"/>
               <text x="60" y="55" textAnchor="middle" fill={grade.color} fontSize="24" fontWeight="800">{score}%</text>
-              <text x="60" y="73" textAnchor="middle" fill="#64748b" fontSize="10">{grade.emoji} {grade.label}</text>
+              <text x="60" y="73" textAnchor="middle" fill="#8C7B6E" fontSize="10">{grade.emoji} {grade.label}</text>
             </svg>
             <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
-              {[["✅",correct,"Correct"],["❌",questions.length-correct,"Wrong"],["⬜",questions.length-Object.keys(answers).length,"Skipped"]].map(([e,n,l])=><div key={l}><div style={{ fontSize:18, fontWeight:800 }}>{n}</div><div style={{ color:"#64748b", fontSize:12 }}>{e} {l}</div></div>)}
+              {[["✅",correct,"Correct"],["❌",questions.length-correct,"Wrong"],["⬜",questions.length-Object.keys(answers).length,"Skipped"]].map(([e,n,l])=><div key={l}><div style={{ fontSize:18, fontWeight:800 }}>{n}</div><div style={{ color:"#8C7B6E", fontSize:12 }}>{e} {l}</div></div>)}
             </div>
           </div>
         </div>
@@ -1582,18 +1607,18 @@ function ResultsScreen({ questions, answers, onRetry, onHome, userName, mode }) 
           <div style={{ ...S.card, marginBottom:16 }}>
             <div style={{ fontWeight:700, marginBottom:12, fontSize:14 }}>Performance by Section</div>
             {Object.entries(bySection).map(([sec,{total,correct:c,pct}])=>{
-              const col=SC[sec]||{accent:"#3b82f6"};
+              const col=SC[sec]||{accent:"#2B5FA6"};
               const short=sec==="Social/Behavioral/Administrative Sciences"?"Social/Admin":sec.split(" ")[0];
               return <div key={sec} style={{ marginBottom:10 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:4 }}><span style={{ color:"#cbd5e1" }}>{short}</span><span style={{ color:col.accent, fontWeight:700 }}>{c}/{total} ({pct}%)</span></div>
-                <div style={{ height:6, background:"rgba(255,255,255,0.08)", borderRadius:3 }}><div style={{ width:`${pct}%`, height:"100%", borderRadius:3, background:col.accent }} /></div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:4 }}><span style={{ color:T.ink2 }}>{short}</span><span style={{ color:col.accent, fontWeight:700 }}>{c}/{total} ({pct}%)</span></div>
+                <div style={{ height:6, background:T.bg3, borderRadius:3 }}><div style={{ width:`${pct}%`, height:"100%", borderRadius:3, background:col.accent }} /></div>
               </div>;
             })}
           </div>
         )}
         <div style={{ display:"flex", gap:10 }}>
           <button onClick={onHome} style={{ flex:1, ...S.ghost, padding:13, fontSize:14 }}>🏠 Dashboard</button>
-          <button onClick={onRetry} style={{ flex:1, ...S.btn(isExam?"#ef4444":"#10b981"), padding:13 }}>🔄 {isExam?"New Exam":"New Study Session"}</button>
+          <button onClick={onRetry} style={{ flex:1, ...S.btn(isExam?"#B83B2A":"#1A7A5E"), padding:13 }}>🔄 {isExam?"New Exam":"New Study Session"}</button>
         </div>
       </div>
     </div>
