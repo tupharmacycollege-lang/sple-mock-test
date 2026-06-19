@@ -387,22 +387,26 @@ function ExcelImport({ onImport }) {
     if (!file) return;
     setImporting(true); setErr(""); setPreview([]); setSuccess("");
     try {
-      const XLSX = (await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm")).default;
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data, { type:"array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval:"" });
-      const mapped = rows.filter(r => r.question && r.option_a).map((r, i) => ({
-        id: "xl_" + Date.now() + "_" + i,
-        section: r.section || "Pharmaceutical Sciences",
-        category: r.category || "General",
-        difficulty: r.difficulty || "\u0645\u062a\u0648\u0633\u0637",
-        question: String(r.question),
-        options: [String(r.option_a), String(r.option_b), String(r.option_c), String(r.option_d)],
-        answer: parseInt(r.correct_answer) || 0,
-        explanation: String(r.explanation || ""),
-      }));
-      if (mapped.length === 0) { setErr("No valid questions found. Check column names match the template."); setImporting(false); return; }
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g,""));
+      const mapped = lines.slice(1).map((line, i) => {
+        const cols = line.split(",").map(c => c.trim().replace(/"/g,""));
+        const row = {};
+        headers.forEach((h, idx) => { row[h] = cols[idx] || ""; });
+        if (!row.question || !row.option_a) return null;
+        return {
+          id: "xl_" + Date.now() + "_" + i,
+          section: row.section || "Pharmaceutical Sciences",
+          category: row.category || "General",
+          difficulty: row.difficulty || "متوسط",
+          question: row.question,
+          options: [row.option_a, row.option_b, row.option_c, row.option_d],
+          answer: parseInt(row.correct_answer) || 0,
+          explanation: row.explanation || "",
+        };
+      }).filter(Boolean);
+      if (mapped.length === 0) { setErr("No valid questions found. Use CSV format with correct column names."); setImporting(false); return; }
       setPreview(mapped);
     } catch(e) { setErr("Error: " + e.message); }
     setImporting(false);
@@ -412,13 +416,13 @@ function ExcelImport({ onImport }) {
 
   return (
     <div style={{ ...S.card, marginBottom:16, border:"1px solid rgba(16,185,129,0.3)", background:"rgba(16,185,129,0.04)" }}>
-      <div style={{ fontWeight:700, fontSize:15, marginBottom:10 }}>\ud83d\udcca Import from Excel</div>
+      <div style={{ fontWeight:700, fontSize:15, marginBottom:10 }}>📊 Import from CSV</div>
       <div style={{ display:"flex", gap:10, marginBottom:12, alignItems:"center" }}>
         <label style={{ ...S.btn("#10b981"), padding:"10px 16px", cursor:"pointer", fontSize:13 }}>
-          {importing ? "\u23f3 Reading..." : "\ud83d\udcc2 Choose .xlsx File"}
-          <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display:"none" }} />
+          {importing ? "⏳ Reading..." : "📂 Choose .csv File"}
+          <input type="file" accept=".csv" onChange={handleFile} style={{ display:"none" }} />
         </label>
-        <span style={{ color:"#64748b", fontSize:12 }}>Columns: section, category, difficulty, question, option_a, option_b, option_c, option_d, correct_answer (0-3), explanation</span>
+        <span style={{ color:"#64748b", fontSize:12 }}>CSV columns: section, category, difficulty, question, option_a, option_b, option_c, option_d, correct_answer (0-3), explanation</span>
       </div>
       {err && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8, padding:"10px 14px", color:"#fca5a5", fontSize:13, marginBottom:10 }}>\u26a0\ufe0f {err}</div>}
       {success && <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.3)", borderRadius:8, padding:"10px 14px", color:"#86efac", fontSize:13, marginBottom:10 }}>{success}</div>}
