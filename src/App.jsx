@@ -711,7 +711,7 @@ function StudentDashboard({ user, onLogout }) {
     setScreen("results");
   };
 
-  if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} />;
+  if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} allQuestions={questions} />;
   if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} onHome={()=>setScreen("home")} />;
   if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} />;
   if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
@@ -802,408 +802,442 @@ function StudentDashboard({ user, onLogout }) {
 // ===================== STUDY MATERIALS DATA =====================
 const STUDY_LESSONS = [
   {
-    id:"1.1", section:"Basic Biomedical Sciences", title:"Cardiovascular Physiology",
-    color:"#3b82f6",
-    summary:"The cardiovascular system delivers oxygenated blood to tissues. CO = HR × SV | MAP = CO × SVR | MAP = DBP + 1/3(SBP−DBP) | Normal CO = 4–8 L/min",
-    keyPoints:[
-      "Preload = End-diastolic ventricular volume → reduced by diuretics, increased by IV fluids",
-      "Afterload = SVR → reduced by vasodilators (ACE-I, ARBs, nitrates)",
-      "Contractility → increased by digoxin/dobutamine; decreased in heart failure",
-      "Frank-Starling Law: ↑ preload → ↑ stroke volume, but excess preload → ↓ SV (basis for diuretics in HF)",
-      "Ejection Fraction = SV/EDV. Normal ≥55%. HFrEF: EF <40%",
-      "Baroreceptors: ↓BP → SNS activation → ↑HR + vasoconstriction",
-    ],
-    table:{ headers:["Term","Definition","Clinical Use"], rows:[["Preload","End-diastolic vol (LVEDV)","Diuretics ↓ preload"],["Afterload","SVR","Vasodilators ↓ afterload"],["EF","SV/EDV","HFrEF: EF<40%"],["MAP","DBP+1/3(PP)","Target >65 mmHg"]] }
+    id:"1.1", section:"Basic Biomedical Sciences", title:"Cardiovascular Physiology", color:"#3b82f6",
+    blocks:[
+      { type:"text", content:"The cardiovascular system delivers oxygenated blood to tissues. Understanding the determinants of cardiac output and blood pressure is fundamental for managing hypertension, heart failure, and shock." },
+      { type:"formula", label:"Core Formulas", lines:["CO = HR × SV", "MAP = CO × SVR", "MAP = DBP + ⅓(SBP − DBP)", "Normal CO = 4–8 L/min"] },
+      { type:"table", headers:["Term","Definition","Clinical Relevance"], rows:[
+        ["Preload","End-diastolic ventricular volume (LVEDV)","Reduced by diuretics; increased by IV fluids"],
+        ["Afterload","Systemic vascular resistance (SVR)","Reduced by vasodilators (ACE-I, ARBs, nitrates)"],
+        ["Contractility","Intrinsic force of myocardial contraction","Increased by digoxin, dobutamine; decreased in HF"],
+        ["Ejection Fraction","SV / EDV — Normal ≥ 55%","HFrEF: EF < 40%; HFpEF: EF ≥ 50%"],
+        ["MAP","Mean arterial pressure","Target > 65 mmHg for adequate organ perfusion"],
+      ]},
+      { type:"text", content:"Frank-Starling Law: ↑ preload → ↑ stroke volume, but only up to a point. Beyond optimal stretch, the myocardium is overstretched and SV declines — the basis for diuretic therapy in heart failure." },
+      { type:"text", content:"Baroreceptors in the carotid sinus and aortic arch detect changes in BP. When BP drops, they activate the sympathetic nervous system → ↑HR + vasoconstriction to restore pressure." },
+    ]
   },
   {
-    id:"1.2", section:"Basic Biomedical Sciences", title:"Renal Physiology & GFR",
-    color:"#3b82f6",
-    summary:"Cockcroft-Gault: CrCl = [(140−age) × weight] / [72 × SCr] × 0.85 (females). Kidneys filter ~180 L/day.",
-    keyPoints:[
-      "CKD G3a (45–59): start dose adjustments | G3b (30–44): many drugs need adjustment | G4 (15–29): avoid nephrotoxics | G5 (<15): dialysis",
-      "RAAS: ↓BP → Renin → Ang I → ACE → Ang II → vasoconstriction + aldosterone",
-      "ACE-I: block ACE, reduce proteinuria, renoprotective. SE: dry cough (bradykinin↑)",
-      "ARBs: block AT1 receptor — same benefit, NO cough",
-      "ACE-I contraindicated in: bilateral renal artery stenosis, pregnancy, hyperkalemia",
-      "Metformin: hold at CrCl <30 (risk of lactic acidosis)",
-    ],
-    table:{ headers:["CKD Stage","GFR (mL/min)","Action"], rows:[["G1","≥90","Monitor"],["G2","60–89","Monitor"],["G3a","45–59","Dose adjust"],["G3b","30–44","Many drugs adjust"],["G4","15–29","Avoid nephrotoxics"],["G5","<15","Dialysis"]] }
+    id:"1.2", section:"Basic Biomedical Sciences", title:"Renal Physiology & GFR", color:"#3b82f6",
+    blocks:[
+      { type:"text", content:"The kidneys filter ~180 L/day, regulating fluid balance, electrolytes, acid-base balance, and drug excretion. GFR is the key measure of renal function and drives dose adjustment for many drugs." },
+      { type:"formula", label:"Cockcroft-Gault", lines:["CrCl = [(140 − age) × weight (kg)] / [72 × SCr (mg/dL)] × 0.85 for females"] },
+      { type:"table", headers:["CKD Stage","GFR (mL/min)","Clinical Implication"], rows:[
+        ["G1","≥ 90","Normal/high — kidney damage with normal GFR"],
+        ["G2","60–89","Mildly decreased"],
+        ["G3a","45–59","Mild-moderate ↓ — start dose adjustments"],
+        ["G3b","30–44","Moderate-severe ↓ — many drugs need adjustment"],
+        ["G4","15–29","Severe ↓ — avoid nephrotoxic drugs"],
+        ["G5","< 15","Kidney failure — dialysis or transplant"],
+      ]},
+      { type:"text", content:"RAAS pathway: ↓BP → kidneys release Renin → Angiotensin I → ACE → Angiotensin II → vasoconstriction + aldosterone release (Na⁺/water retention)." },
+      { type:"text", content:"ACE inhibitors block ACE; ARBs block angiotensin II receptors. Both reduce proteinuria in CKD/diabetes and have renoprotective effects." },
+    ]
   },
   {
-    id:"1.3", section:"Basic Biomedical Sciences", title:"Acid-Base Balance",
-    color:"#3b82f6",
-    summary:"Normal: pH 7.35–7.45 | PaCO₂ 35–45 | HCO₃⁻ 22–26. Check pH → PaCO₂ → HCO₃⁻.",
-    keyPoints:[
-      "Respiratory Acidosis: ↓pH, ↑PaCO₂ → COPD, opioid OD, hypoventilation",
-      "Respiratory Alkalosis: ↑pH, ↓PaCO₂ → anxiety, PE, hyperventilation",
-      "Metabolic Acidosis: ↓pH, ↓HCO₃⁻ → DKA, lactic acidosis, renal failure, diarrhea",
-      "Metabolic Alkalosis: ↑pH, ↑HCO₃⁻ → vomiting, loop diuretics, hyperaldosteronism",
-      "COPD: target SpO₂ 88–92% only! Excess O₂ suppresses hypoxic drive → CO₂ retention",
-      "Compensation moves the OPPOSITE parameter in the SAME direction as pH",
-    ],
-    table:{ headers:["Disorder","pH","PaCO₂","HCO₃⁻"], rows:[["Resp Acidosis","↓","↑","Normal/↑"],["Resp Alkalosis","↑","↓","Normal/↓"],["Metab Acidosis","↓","Normal/↓","↓"],["Metab Alkalosis","↑","Normal/↑","↑"]] }
+    id:"1.3", section:"Basic Biomedical Sciences", title:"Acid-Base Balance", color:"#3b82f6",
+    blocks:[
+      { type:"text", content:"Acid-base balance maintains arterial pH at 7.35–7.45. The body uses chemical buffers, the lungs (CO₂ excretion), and the kidneys (HCO₃⁻ regulation) to maintain this narrow range." },
+      { type:"formula", label:"Normal Values", lines:["pH 7.35–7.45", "PaCO₂ 35–45 mmHg", "PaO₂ 80–100 mmHg", "HCO₃⁻ 22–26 mEq/L"] },
+      { type:"table", headers:["Disorder","pH","PaCO₂","HCO₃⁻","Common Causes"], rows:[
+        ["Respiratory Acidosis","↓","↑","Normal/↑","COPD, opioid overdose, hypoventilation"],
+        ["Respiratory Alkalosis","↑","↓","Normal/↓","Anxiety, PE, fever, mechanical over-ventilation"],
+        ["Metabolic Acidosis","↓","Normal/↓","↓","DKA, lactic acidosis, renal failure, diarrhea"],
+        ["Metabolic Alkalosis","↑","Normal/↑","↑","Vomiting, loop diuretics, hyperaldosteronism"],
+      ]},
+      { type:"text", content:"Fast approach: check pH first → then PaCO₂ → then HCO₃⁻. Respiratory disorders involve PaCO₂; metabolic disorders involve HCO₃⁻. Compensation moves the OPPOSITE parameter in the SAME direction as pH." },
+      { type:"alert", label:"⚠️ COPD Caution", content:"Target SpO₂ = 88–92% only. Excess O₂ suppresses the hypoxic drive → worsens CO₂ retention → respiratory failure." },
+    ]
   },
   {
-    id:"1.4", section:"Basic Biomedical Sciences", title:"Enzyme Kinetics (Michaelis-Menten)",
-    color:"#3b82f6",
-    summary:"V = Vmax × [S] / (Km + [S]) | Km = [S] at ½Vmax | Lower Km = higher affinity",
-    keyPoints:[
-      "Competitive inhibitor: ↑Km (apparent), Vmax unchanged — overcome by excess substrate",
-      "Non-competitive inhibitor: Km unchanged, ↓Vmax — binds allosteric site",
-      "Uncompetitive inhibitor: ↓both Km and Vmax — binds enzyme-substrate complex",
-      "First-order kinetics: rate ∝ concentration (most drugs)",
-      "Zero-order (saturable) kinetics: Phenytoin, Aspirin OD, Ethanol — small dose → big level rise",
-    ],
-    table:{ headers:["Inhibitor","Km","Vmax","Reversed by substrate?"], rows:[["Competitive","↑","Unchanged","Yes"],["Non-competitive","Unchanged","↓","No"],["Uncompetitive","↓","↓","No"]] }
+    id:"1.4", section:"Basic Biomedical Sciences", title:"Enzyme Kinetics (Michaelis-Menten)", color:"#3b82f6",
+    blocks:[
+      { type:"text", content:"Michaelis-Menten kinetics describes how enzyme reaction rate depends on substrate concentration. This is foundational for understanding drug metabolism and enzyme inhibitor pharmacology." },
+      { type:"formula", label:"Equation", lines:["V = Vmax × [S] / (Km + [S])", "Km = [S] at ½ Vmax", "Lower Km = higher enzyme affinity"] },
+      { type:"table", headers:["Inhibitor Type","Effect on Km","Effect on Vmax","Reversible by Excess Substrate?"], rows:[
+        ["Competitive","↑ (apparent)","Unchanged","Yes — binds active site"],
+        ["Non-competitive","Unchanged","↓","No — binds allosteric site"],
+        ["Uncompetitive","↓","↓","No — binds enzyme-substrate complex"],
+        ["Mixed","Variable","↓","Partial"],
+      ]},
+      { type:"text", content:"Most drugs exhibit FIRST-ORDER kinetics (rate proportional to concentration). However, some drugs (Phenytoin, Aspirin in overdose, Ethanol) show ZERO-ORDER (saturable) kinetics — small dose increases cause disproportionate level rises." },
+    ]
   },
   {
-    id:"1.5", section:"Basic Biomedical Sciences", title:"Microbiology & Gram Stain",
-    color:"#3b82f6",
-    summary:"Gram stain guides empirical antibiotic selection. Gram+ = purple (thick peptidoglycan). Gram− = pink (thin wall + LPS outer membrane).",
-    keyPoints:[
-      "Gram+: S. aureus, Streptococcus, Enterococcus, Clostridium → Exotoxins",
-      "Gram−: E. coli, Klebsiella, Pseudomonas, H. influenzae → Endotoxin (LPS) → septic shock",
-      "Anti-Pseudomonal: Pip-Tazo, Cefepime, Meropenem, Ciprofloxacin — NOT Amoxicillin/Ceftriaxone",
-      "Atypicals (Mycoplasma, Chlamydia, Legionella): no cell wall → treat with macrolides/doxycycline/FQ",
-      "MRSA: Vancomycin IV (monitor AUC/MIC 400–600)",
-    ],
-    table:{ headers:["Feature","Gram+","Gram−"], rows:[["Color","Purple","Pink"],["Wall","Thick peptidoglycan","Thin + LPS outer membrane"],["Toxin","Exotoxins","Endotoxin (LPS)"],["Examples","S. aureus, Strep","E. coli, Pseudomonas"]] }
+    id:"1.5", section:"Basic Biomedical Sciences", title:"Microbiology & Gram Stain", color:"#3b82f6",
+    blocks:[
+      { type:"text", content:"Bacterial classification by Gram stain guides empirical antibiotic selection. The differential staining reflects fundamental cell wall structure differences with major clinical implications." },
+      { type:"table", headers:["Feature","Gram-Positive (+)","Gram-Negative (−)"], rows:[
+        ["Cell wall","Thick peptidoglycan","Thin peptidoglycan + outer membrane (LPS)"],
+        ["Stain color","Purple/violet","Pink/red"],
+        ["Key toxin","Exotoxins (proteins)","Endotoxin (LPS) → septic shock"],
+        ["Sepsis","Less common","Massive cytokine release (TNF-α, IL-1)"],
+        ["Examples","S. aureus, Streptococcus, Enterococcus, Clostridium","E. coli, Klebsiella, Pseudomonas, H. influenzae"],
+      ]},
+      { type:"text", content:"Anti-Pseudomonal coverage requires SPECIFIC agents: Piperacillin-Tazobactam, Cefepime, Ceftazidime, Meropenem, Imipenem, Aztreonam, Ciprofloxacin, Aminoglycosides. Standard beta-lactams (Amoxicillin, Ceftriaxone) do NOT cover Pseudomonas." },
+      { type:"alert", label:"💊 Atypicals", content:"Mycoplasma, Chlamydia, Legionella have no cell wall — Gram stain doesn't apply. Treat with macrolides, doxycycline, or fluoroquinolones." },
+    ]
   },
   {
-    id:"1.6", section:"Basic Biomedical Sciences", title:"Immunology — Antibodies & Hypersensitivity",
-    color:"#3b82f6",
-    summary:"IgG (75%): crosses placenta. IgA (15%): mucosal. IgM (8%): first in acute infection. IgE (<0.01%): mast cells, Type I reactions.",
-    keyPoints:[
-      "Type I (Immediate): IgE → mast cells → histamine → Anaphylaxis, allergic asthma",
-      "Type II (Cytotoxic): IgG/IgM + complement → ABO transfusion reaction, hemolytic anemia",
-      "Type III (Immune complex): Ag-Ab deposits → SLE, serum sickness, post-strep GN",
-      "Type IV (Delayed, 48–72h): T-cell mediated → TB skin test, contact dermatitis, transplant rejection",
-      "Elevated IgM = recent/acute infection | Elevated IgG = long-term/past immunity",
-    ],
-    table:{ headers:["Type","Mechanism","Example"], rows:[["I – Immediate","IgE/mast cells","Anaphylaxis"],["II – Cytotoxic","IgG/IgM + complement","Transfusion reaction"],["III – Immune complex","Ag-Ab deposits","SLE, serum sickness"],["IV – Delayed","T-cells (48–72h)","TB test, contact dermatitis"]] }
+    id:"1.6", section:"Basic Biomedical Sciences", title:"Immunology — Antibodies & Hypersensitivity", color:"#3b82f6",
+    blocks:[
+      { type:"text", content:"The adaptive immune system uses antibodies (immunoglobulins) and T cells to recognize and eliminate pathogens. Dysregulated responses cause hypersensitivity reactions, the foundation of many drug allergies and autoimmune diseases." },
+      { type:"table", headers:["Class","% of Serum","Key Property","Clinical Significance"], rows:[
+        ["IgG","75%","Crosses placenta","Long-term protection, IVIG therapy"],
+        ["IgA","15%","Mucosal secretions","First-line mucosal defense (saliva, breast milk)"],
+        ["IgM","8%","Pentameric, first to appear","Marker of acute/recent infection"],
+        ["IgE","<0.01%","Binds mast cells","Type I hypersensitivity, parasites"],
+        ["IgD","Trace","B-cell surface receptor","Developmental role"],
+      ]},
+      { type:"table", headers:["Type","Mechanism","Mediator","Classic Example"], rows:[
+        ["Type I — Immediate","IgE on mast cells → histamine","IgE","Anaphylaxis, allergic asthma"],
+        ["Type II — Cytotoxic","IgG/IgM bind cell antigens","IgG/IgM + Complement","ABO transfusion reaction, hemolytic anemia"],
+        ["Type III — Immune complex","Ag-Ab complexes deposit in tissue","Complement","SLE, serum sickness, post-strep GN"],
+        ["Type IV — Delayed","T-cell mediated (48–72h)","T cells","TB skin test, contact dermatitis, transplant rejection"],
+      ]},
+    ]
   },
   {
-    id:"2.1", section:"Pharmaceutical Sciences", title:"Pharmacokinetics — ADME Overview",
-    color:"#10b981",
-    summary:"t½ = 0.693 × Vd / CL | Steady state = 4–5 × t½ | Loading dose = Vd × Cp(target) | F(IV) = 100%",
-    keyPoints:[
-      "Bioavailability (F): fraction reaching systemic circulation. IV = 100%. Oral reduced by first-pass metabolism",
-      "First-pass: GI absorption → portal vein → liver → metabolism BEFORE systemic circulation",
-      "Clearance (CL) = Dose/AUC → determines maintenance dose",
-      "Vd = Dose/Cp(initial) → large Vd = extensive tissue distribution",
-      "AUC = total drug exposure over time",
-      "Maintenance dose = CL × Css × τ / F",
-    ],
-    table:{ headers:["Parameter","Formula","Clinical use"], rows:[["t½","0.693 × Vd/CL","Time to steady state"],["CL","Dose/AUC","Maintenance dose"],["Vd","Dose/Cp","Loading dose"],["Loading dose","Vd × Cp(target)","Rapid target level"]] }
+    id:"2.1", section:"Pharmaceutical Sciences", title:"Pharmacokinetics — ADME Overview", color:"#10b981",
+    blocks:[
+      { type:"text", content:"Pharmacokinetics describes what the body does to the drug: Absorption, Distribution, Metabolism, Excretion (ADME). Mastering these concepts is essential for dosing, predicting drug interactions, and managing toxicity." },
+      { type:"formula", label:"Bioavailability (F)", lines:["F = fraction of dose reaching systemic circulation","IV F = 100% by definition","Oral F reduced by GI degradation, P-gp efflux, and first-pass hepatic metabolism"] },
+      { type:"table", headers:["Parameter","Formula","Clinical Use"], rows:[
+        ["Half-life (t½)","0.693 × Vd / CL","Time to steady state = 4–5 × t½"],
+        ["Clearance (CL)","Dose / AUC","Determines maintenance dose"],
+        ["Vd","Dose / Cp(initial)","Large Vd = tissue distribution"],
+        ["AUC","Integral of Cp × time","Total drug exposure"],
+        ["Loading dose","Vd × Cp(target)","Rapidly achieve target level"],
+        ["Maintenance dose","CL × Css × τ / F","Replaces drug eliminated"],
+      ]},
+      { type:"alert", label:"💊 First-Pass Example", content:"Oral morphine F ~ 30% vs IV F = 100%. Oral dose must be ~3× the IV dose for equivalent analgesia." },
+    ]
   },
   {
-    id:"2.2", section:"Pharmaceutical Sciences", title:"CYP450 Drug Metabolism",
-    color:"#10b981",
-    summary:"CYP3A4 metabolizes ~50% of drugs. Inhibitors ↑drug levels. Inducers ↓drug levels. Phase I: oxidation. Phase II: conjugation.",
-    keyPoints:[
-      "CYP3A4 inhibitors: Erythromycin, Clarithromycin, Ketoconazole, Ritonavir, Grapefruit",
-      "CYP3A4 inducers: Rifampicin, Carbamazepine, Phenytoin, St. John's Wort",
-      "CYP2D6 inhibitors: Fluoxetine, Paroxetine, Bupropion — converts Codeine → Morphine",
-      "CYP2C9 inhibitors: Fluconazole, Amiodarone, Metronidazole → ↑Warfarin → bleeding",
-      "Grapefruit: irreversibly inhibits intestinal CYP3A4 for 24–72h → ↑CCBs, statins",
-      "Rifampicin + Warfarin: ↑CYP2C9 → ↓INR → thrombosis",
-    ],
-    table:{ headers:["Enzyme","% Drugs","Key Inhibitors","Key Inducers"], rows:[["CYP3A4","~50%","Erythromycin, Ketoconazole, Grapefruit","Rifampicin, Phenytoin, St. John's Wort"],["CYP2D6","~25%","Fluoxetine, Paroxetine","None significant"],["CYP2C9","~15%","Fluconazole, Metronidazole","Rifampicin"],["CYP1A2","~5%","Ciprofloxacin","Smoking"]] }
+    id:"2.2", section:"Pharmaceutical Sciences", title:"CYP450 Drug Metabolism", color:"#10b981",
+    blocks:[
+      { type:"text", content:"The Cytochrome P450 (CYP450) enzyme family metabolizes most drugs in the liver. Understanding CYP inhibitors and inducers predicts the majority of clinically significant drug-drug interactions." },
+      { type:"table", headers:["Enzyme","% Drug Metabolism","Major Inhibitors","Major Inducers"], rows:[
+        ["CYP3A4","~50%","Erythromycin, Clarithromycin, Ketoconazole, Itraconazole, Ritonavir, Grapefruit","Rifampicin, Carbamazepine, Phenytoin, St. John's Wort"],
+        ["CYP2D6","~25%","Fluoxetine, Paroxetine, Bupropion, Quinidine","None clinically significant"],
+        ["CYP2C9","~15%","Fluconazole, Amiodarone, Metronidazole","Rifampicin, Carbamazepine"],
+        ["CYP2C19","~10%","Omeprazole, Fluvoxamine, Fluconazole","Rifampicin"],
+        ["CYP1A2","~5%","Ciprofloxacin, Fluvoxamine","Smoking, Omeprazole, Phenytoin"],
+      ]},
+      { type:"text", content:"Phase I: oxidation/reduction/hydrolysis by CYP enzymes → often produces active metabolites. Phase II: conjugation (glucuronidation, sulfation, acetylation) → water-soluble, inactive products for excretion." },
+      { type:"alert", label:"🍊 Grapefruit Effect", content:"Furanocoumarins in grapefruit IRREVERSIBLY inhibit intestinal CYP3A4 → ↑ levels of CCBs, statins, immunosuppressants. Effect lasts 24–72 hours." },
+    ]
   },
   {
-    id:"2.3", section:"Pharmaceutical Sciences", title:"Volume of Distribution & Drug Distribution",
-    color:"#10b981",
-    summary:"Vd = Dose/Cp(initial). Small Vd (<1 L/kg) = plasma. Large Vd (>5 L/kg) = tissue sequestration.",
-    keyPoints:[
-      "Small Vd: Warfarin, Furosemide, Aminoglycosides, Heparin (stay in plasma)",
-      "Large Vd: Digoxin (500L), Amiodarone (5000L), Chlorpromazine",
-      "Only FREE drug is pharmacologically active — protein binding: albumin (acidic drugs), α1-AGP (basic drugs)",
-      "Displacement interactions matter most for high-protein-bound, narrow-TI drugs (Warfarin, Phenytoin)",
-      "BBB crossing requires lipophilic, uncharged molecules — Heroin > Morphine (faster BBB penetration)",
-    ],
-    table:{ headers:["Vd","Interpretation","Examples"], rows:[["<1 L/kg","Plasma-restricted","Warfarin, Heparin, Aminoglycosides"],["1–5 L/kg","Tissue distribution","Most drugs"],[">5 L/kg","Extensive tissue (lipophilic)","Digoxin (500L), Amiodarone (5000L)"]] }
+    id:"2.3", section:"Pharmaceutical Sciences", title:"Volume of Distribution & Drug Distribution", color:"#10b981",
+    blocks:[
+      { type:"text", content:"Volume of Distribution (Vd) is a theoretical volume describing how extensively a drug distributes throughout the body. Vd predicts loading doses and explains why some drugs persist despite low plasma levels." },
+      { type:"formula", label:"Vd Formula", lines:["Vd = Dose / Cp(initial)", "Units: L or L/kg", "Large Vd → drug sequestered in tissues"] },
+      { type:"table", headers:["Vd","Interpretation","Examples"], rows:[
+        ["Small (<1 L/kg)","Stays in plasma","Warfarin, Furosemide, Aminoglycosides, Heparin"],
+        ["Moderate (1–5 L/kg)","Distributes into tissues","Most drugs"],
+        ["Large (>5 L/kg)","Extensive lipid tissue distribution","Digoxin (500L), Amiodarone (5000L), Chlorpromazine"],
+      ]},
+      { type:"text", content:"Plasma protein binding: drugs bind reversibly to albumin (acidic drugs) or alpha1-acid glycoprotein (basic drugs). Only FREE drug is pharmacologically active. Displacement interactions matter most for high-protein-bound, narrow-TI drugs (Warfarin, Phenytoin)." },
+      { type:"text", content:"Crossing the Blood-Brain Barrier (BBB) requires lipophilic, uncharged molecules. Heroin crosses BBB faster than morphine — the basis for its higher addiction potential." },
+    ]
   },
   {
-    id:"2.4", section:"Pharmaceutical Sciences", title:"Pharmacodynamics & Receptor Theory",
-    color:"#10b981",
-    summary:"TI = LD50/ED50. Narrow-TI drugs: Warfarin, Lithium, Digoxin, Aminoglycosides, Phenytoin, Cyclosporine.",
-    keyPoints:[
-      "Full agonist: 100% efficacy (Morphine) | Partial agonist: <100% — ceiling effect (Buprenorphine)",
-      "Competitive antagonist: reversible, overcome by ↑agonist (Propranolol)",
-      "Non-competitive antagonist: irreversible/allosteric, ↓Vmax (Phenoxybenzamine)",
-      "Ionotropic: direct ion channel, milliseconds (BZD-GABA-A, Nicotinic)",
-      "GPCRs: cAMP/IP3 second messengers (beta-blockers, Opioids, Muscarinic)",
-      "Nuclear receptors: gene transcription, hours–days (Corticosteroids, Thyroid hormones)",
-    ],
-    table:{ headers:["Drug type","Efficacy","Example"], rows:[["Full agonist","100%","Morphine"],["Partial agonist","<100% (ceiling)","Buprenorphine"],["Competitive antagonist","Blocks — reversible","Propranolol"],["Non-competitive","Blocks — irreversible","Phenoxybenzamine"]] }
+    id:"2.4", section:"Pharmaceutical Sciences", title:"Pharmacodynamics & Receptor Theory", color:"#10b981",
+    blocks:[
+      { type:"table", headers:["Term","Definition","Example"], rows:[
+        ["Full agonist","Maximum receptor response (100% efficacy)","Morphine at mu-opioid"],
+        ["Partial agonist","Submaximal response (<100% efficacy)","Buprenorphine at mu-opioid"],
+        ["Competitive antagonist","Reversible blocker, overcome by ↑ agonist","Propranolol (beta-blocker)"],
+        ["Non-competitive antagonist","Irreversible or allosteric blocker","Phenoxybenzamine (alpha-blocker)"],
+        ["Inverse agonist","Produces opposite effect of agonist","Mifepristone (progesterone receptor)"],
+      ]},
+      { type:"table", headers:["Receptor Type","Mechanism","Onset","Examples"], rows:[
+        ["Ionotropic","Direct ion channel","Milliseconds","Benzodiazepines (GABA-A), Nicotinic"],
+        ["GPCRs","cAMP, IP3, DAG second messengers","Seconds–minutes","Beta-blockers, Opioids, Muscarinic"],
+        ["Kinase-linked","Autophosphorylation cascades","Minutes–hours","Insulin, Growth factors"],
+        ["Nuclear receptors","Gene transcription","Hours–days","Corticosteroids, Thyroid hormones"],
+      ]},
+      { type:"alert", label:"⚠️ Therapeutic Index", content:"TI = LD50 / ED50. Higher TI = safer drug. NARROW-TI drugs needing TDM: Warfarin, Lithium, Digoxin, Aminoglycosides, Phenytoin, Cyclosporine." },
+    ]
   },
   {
-    id:"2.5", section:"Pharmaceutical Sciences", title:"Toxicology & Antidotes",
-    color:"#10b981",
-    summary:"Memorize antidotes — extremely high-yield on SPLE.",
-    keyPoints:[
-      "Paracetamol → NAC (within 8–10h). Mechanism: NAPQI depletes glutathione → hepatic necrosis",
-      "Opioids → Naloxone (short t½ — may need infusion)",
-      "Benzodiazepines → Flumazenil (AVOID in seizure/chronic BZD users)",
-      "Warfarin → Vit K + 4-factor PCC (active bleeding)",
-      "Beta-blockers → Glucagon + Atropine | Digoxin → DigiFab",
-      "Organophosphates → Atropine + Pralidoxime (2-PAM within 48h)",
-      "Methanol/Ethylene glycol → Fomepizole | Cyanide → Hydroxocobalamin",
-      "Methemoglobinemia → Methylene Blue | CO → 100% O₂",
-    ],
-    table:{ headers:["Toxin","Antidote","Key Note"], rows:[["Paracetamol","NAC","<8h max benefit"],["Opioids","Naloxone","Short t½, may repeat"],["Warfarin","Vit K + 4F-PCC","PCC for active bleed"],["Organophosphates","Atropine + 2-PAM","2-PAM within 48h"],["Beta-blocker","Glucagon","Bypasses β-receptor"],["CO","100% O₂","↓COHb t½ 5h→1h"]] }
+    id:"2.5", section:"Pharmaceutical Sciences", title:"Toxicology & Antidotes", color:"#10b981",
+    blocks:[
+      { type:"text", content:"Recognizing toxidromes and administering antidotes early can be life-saving. Memorize the major antidotes — they are extremely high-yield on SPLE." },
+      { type:"table", headers:["Toxin","Antidote","Critical Notes"], rows:[
+        ["Paracetamol","N-Acetylcysteine (NAC)","Most effective < 8–10 hr post-ingestion"],
+        ["Opioids","Naloxone","Short t½ — may need infusion"],
+        ["Benzodiazepines","Flumazenil","AVOID in seizure patients (lowers threshold)"],
+        ["Warfarin","Vitamin K + 4-factor PCC","Vit K onset 6–12 hr; PCC for active bleeding"],
+        ["Beta-blockers","Glucagon + Atropine","Glucagon bypasses beta-receptors via cAMP"],
+        ["Digoxin","Digoxin Immune Fab (DigiFab)","Correct K⁺ and Mg²⁺ first"],
+        ["CO poisoning","100% O₂ (or hyperbaric)","Reduces COHb t½ from 5h to 1h"],
+        ["Iron overdose","Deferoxamine","Urine: vin-rosé color"],
+        ["Organophosphates","Atropine + Pralidoxime (2-PAM)","2-PAM within 48 hr before enzyme aging"],
+        ["Heparin","Protamine Sulfate","1 mg per 100 units of heparin"],
+        ["Methanol/Ethylene glycol","Fomepizole or Ethanol","Inhibits alcohol dehydrogenase"],
+        ["Methemoglobinemia","Methylene Blue","O₂ won't help — Hb cannot carry O₂"],
+        ["Cyanide","Hydroxocobalamin","Binds CN to form cyanocobalamin (B12)"],
+      ]},
+      { type:"alert", label:"💊 Paracetamol Mechanism", content:"Paracetamol → NAPQI (toxic) depletes hepatic glutathione → hepatic necrosis. NAC replenishes glutathione — give within 8 hours for max benefit." },
+    ]
   },
   {
-    id:"3.1", section:"Social/Behavioral/Administrative Sciences", title:"Biomedical Ethics — Four Principles",
-    color:"#8b5cf6",
-    summary:"Autonomy | Beneficence | Non-maleficence | Justice. Capacity = understand + appreciate + reason + communicate.",
-    keyPoints:[
-      "Autonomy: respect patient's right to decide — competent adult refusal MUST be respected",
-      "Beneficence: act in patient's best interest",
-      "Non-maleficence: 'First, do no harm' — avoid toxic drugs when benefit < risk",
-      "Justice: fair distribution of resources (formulary decisions, transplant lists)",
-      "Capacity is decision-specific — mild dementia ≠ automatic incapacity",
-      "Confidentiality exceptions: written consent, legal subpoena, imminent harm to 3rd party, mandatory reporting",
-    ],
-    table:{ headers:["Principle","Definition","Common conflict"], rows:[["Autonomy","Patient's right to decide","vs Beneficence"],["Beneficence","Act in best interest","vs Autonomy"],["Non-maleficence","Do no harm","vs Beneficence in palliation"],["Justice","Fair resource distribution","Individual vs society"]] }
+    id:"3.1", section:"Social/Behavioral/Administrative Sciences", title:"Biomedical Ethics — Four Principles", color:"#8b5cf6",
+    blocks:[
+      { type:"table", headers:["Principle","Definition","Example","Common Conflict"], rows:[
+        ["Autonomy","Respect patient's right to decide","Honoring refusal of treatment","vs Beneficence — refusing life-saving treatment"],
+        ["Beneficence","Act in patient's best interest","Prescribing optimal therapy","vs Autonomy"],
+        ["Non-maleficence","'First, do no harm'","Avoiding toxic drugs when benefit < risk","vs Beneficence in palliative care"],
+        ["Justice","Fair distribution of resources","Formulary decisions, transplant lists","Individual vs society"],
+      ]},
+      { type:"text", content:"Capacity assessment: a patient has decision-making capacity if they can (1) understand the information, (2) appreciate the consequences, (3) reason through options, and (4) communicate a choice. Capacity is decision-specific." },
+      { type:"alert", label:"🔒 Confidentiality Exceptions", content:"Allowed disclosures: (1) explicit written patient consent, (2) legal subpoena, (3) imminent serious harm to identifiable third party, (4) mandatory reporting (infectious disease, abuse)." },
+    ]
   },
   {
-    id:"3.2", section:"Social/Behavioral/Administrative Sciences", title:"KSA Pharmacy Law & Regulation",
-    color:"#8b5cf6",
-    summary:"SFDA: drug registration + GMP + pharmacovigilance. SCFHS: pharmacist licensing + SPLE. MOH: national health policy.",
-    keyPoints:[
-      "SFDA: drug registration, GMP inspection, pharmacovigilance, recalls — ADR reporting mandatory",
-      "SCFHS: licenses health professionals, administers SPLE exam",
-      "MOH: national health policy, Essential Medicines List, MOH hospitals",
-      "NUPCO: central drug procurement for government sector",
-      "CBAHI: hospital accreditation | CCHI: health insurance",
-      "Schedule I (Morphine, Fentanyl): TRIPLICATE Rx — original only, NO fax/photocopy",
-      "Schedule II (BZD): duplicate Rx | Schedule III (Codeine combos): standard Rx",
-    ],
-    table:{ headers:["Authority","Main Role"], rows:[["SFDA","Drug registration, GMP, pharmacovigilance"],["SCFHS","Pharmacist licensing, SPLE"],["MOH","Health policy, Essential Medicines"],["NUPCO","Government drug procurement"],["CBAHI","Hospital accreditation"]] }
+    id:"3.2", section:"Social/Behavioral/Administrative Sciences", title:"KSA Pharmacy Law & Regulation", color:"#8b5cf6",
+    blocks:[
+      { type:"table", headers:["Authority","Role"], rows:[
+        ["SFDA (Saudi FDA)","Drug registration; GMP inspection; pharmacovigilance; recalls"],
+        ["MOH (Ministry of Health)","National health policy; Essential Medicines List; MOH hospitals"],
+        ["SCFHS","Health profession licensing; SPLE examination administration"],
+        ["NUPCO","Central drug procurement for government sector"],
+        ["CBAHI","Hospital and healthcare facility accreditation"],
+        ["CCHI","Cooperative Council for Health Insurance"],
+      ]},
+      { type:"alert", label:"📋 Controlled Substances", content:"Schedule I (Morphine, Fentanyl): TRIPLICATE Rx, original only — NO fax/photocopy. Schedule II (Benzodiazepines): duplicate Rx. Schedule III (Codeine combinations): standard Rx." },
+      { type:"text", content:"Adverse drug reaction (ADR) reporting to SFDA is mandatory for serious events. Required info: patient demographics, drug details (dose, indication, dates), reaction description (severity, outcome), reporter information." },
+    ]
   },
   {
-    id:"3.3", section:"Social/Behavioral/Administrative Sciences", title:"Pharmacoeconomics & Health Outcomes",
-    color:"#8b5cf6",
-    summary:"ICER = (Cost_new − Cost_old) / (Effect_new − Effect_old). 1 QALY = 1 year in perfect health.",
-    keyPoints:[
-      "CMA: cost only — when outcomes are equal (generic substitution)",
-      "CEA: cost per clinical unit ($/mmHg, $/LYS) — comparing same disease",
-      "CUA: cost per QALY — comparing across different diseases",
-      "CBA: net monetary benefit — full financial ROI",
-      "ICER < WTP threshold → cost-effective",
-      "QALY combines length AND quality of life",
-    ],
-    table:{ headers:["Analysis","Outcome","When to use"], rows:[["CMA","Cost only","Equal outcomes"],["CEA","$/clinical unit","Same disease"],["CUA","$/QALY","Across diseases"],["CBA","Net $","Full ROI"]] }
+    id:"3.3", section:"Social/Behavioral/Administrative Sciences", title:"Pharmacoeconomics & Health Outcomes", color:"#8b5cf6",
+    blocks:[
+      { type:"table", headers:["Analysis","Outcome Measure","When to Use"], rows:[
+        ["CMA (Cost-Minimization)","Cost only — outcomes assumed equal","Generic substitution; proven equivalence"],
+        ["CEA (Cost-Effectiveness)","Cost per clinical outcome unit","Same disease comparison ($/mmHg, $/LYS)"],
+        ["CUA (Cost-Utility)","Cost per QALY","Across different diseases"],
+        ["CBA (Cost-Benefit)","Net monetary benefit","Full financial ROI analysis"],
+      ]},
+      { type:"formula", label:"ICER", lines:["ICER = (Cost_new − Cost_old) / (Effect_new − Effect_old)", "If ICER < willingness-to-pay threshold → cost-effective"] },
+      { type:"text", content:"QALY = Quality-Adjusted Life Year. Combines length AND quality of life. 1 QALY = 1 year in perfect health. Allows comparison across very different diseases (cancer vs depression vs HIV)." },
+    ]
   },
   {
-    id:"4.1", section:"Clinical Sciences", title:"Therapeutic Drug Monitoring (TDM)",
-    color:"#ef4444",
-    summary:"TDM = Narrow TI + high PK variability + clear concentration-effect relationship + established target range. Steady state = 4–5 × t½.",
-    keyPoints:[
-      "Vancomycin: AUC/MIC 400–600 (Bayesian preferred) — avoid nephrotoxicity",
-      "Gentamicin: Peak 5–10, Trough <2 mg/L — once-daily preferred",
-      "Phenytoin: 10–20 mg/L — NON-LINEAR kinetics (small dose → big level rise)",
-      "Lithium: 0.6–1.2 mEq/L — toxicity >1.5. Precipitated by NSAIDs, dehydration, thiazides",
-      "Digoxin: 0.5–0.9 ng/mL (HF) — hypokalemia ↑ toxicity. Sample ≥6h post-dose",
-      "Measure trough JUST BEFORE next dose at steady state",
-    ],
-    table:{ headers:["Drug","Target","Sampling","Key Note"], rows:[["Vancomycin","AUC/MIC 400–600","Bayesian","Avoid nephrotoxicity"],["Phenytoin","10–20 mg/L","Steady state 7–10d","Non-linear kinetics"],["Lithium","0.6–1.2 mEq/L","12h post-dose","NSAIDs ↑ toxicity"],["Digoxin","0.5–0.9 ng/mL (HF)","≥6h post-dose","Hypokalemia ↑ toxicity"]] }
+    id:"4.1", section:"Clinical Sciences", title:"Therapeutic Drug Monitoring (TDM)", color:"#ef4444",
+    blocks:[
+      { type:"text", content:"TDM is essential for narrow-therapeutic-index drugs with high inter-patient PK variability. Measuring plasma levels prevents toxicity and ensures efficacy." },
+      { type:"formula", label:"When TDM is Needed", lines:["Narrow TI + high PK variability + clear concentration-effect relationship + established target range"] },
+      { type:"table", headers:["Drug","Target Range","Sampling","Key Notes"], rows:[
+        ["Vancomycin","AUC/MIC 400–600","Bayesian preferred","Avoid nephrotoxicity"],
+        ["Gentamicin","Peak 5–10, Trough <2 mg/L","Peak: 30 min post-dose; Trough: pre-dose","Once-daily dosing preferred"],
+        ["Phenytoin","10–20 mg/L (free 1–2)","Steady state 7–10 days","Non-linear kinetics — small dose → big level rise"],
+        ["Lithium","0.6–1.2 mEq/L (acute up to 1.5)","12h post-dose","Toxicity >1.5; precipitated by NSAIDs, dehydration"],
+        ["Digoxin","0.5–2 ng/mL (HF: 0.5–0.9)","≥6h post-dose","Hypokalemia ↑ toxicity risk"],
+        ["Cyclosporine","100–400 ng/mL","C0 (trough) or C2 (2hr post)","CYP3A4 substrate — many interactions"],
+        ["Theophylline","10–20 mcg/mL","Trough","Cardiac arrhythmias above 20"],
+      ]},
+      { type:"text", content:"Steady-state is reached at 4–5 half-lives. Measure trough levels just BEFORE the next dose. Adjust doses based on the level and clinical response, not the level alone." },
+    ]
   },
   {
-    id:"4.2", section:"Clinical Sciences", title:"Pregnancy & Lactation",
-    color:"#ef4444",
-    summary:"Pregnancy alters PK: ↑Vd, ↑renal clearance, ↑hepatic metabolism. Folic acid 0.4 mg/day starting 1 month BEFORE conception.",
-    keyPoints:[
-      "First-line HTN in pregnancy: Methyldopa, Labetalol, Nifedipine",
-      "AVOID in pregnancy: ACE-I/ARB (fetal renal damage), Warfarin (X), Methotrexate (X), Isotretinoin (X)",
-      "Category X: Warfarin, Isotretinoin, Methotrexate, Thalidomide — absolutely contraindicated",
-      "Tetracyclines (>1st trim): tooth discoloration + bone growth suppression in fetus",
-      "Folic acid 4 mg/day if prior neural tube defect pregnancy",
-      "Safest antidiabetics: Metformin + Insulin",
-    ],
-    table:{ headers:["FDA Cat","Meaning","Examples"], rows:[["A","No risk — human studies","Folic acid, Levothyroxine"],["B","Animal safe, no human data","Penicillins, Metformin"],["C","Animal risk, benefit may outweigh","Fluconazole single-dose"],["D","Human risk — benefit may justify","Phenytoin, Tetracyclines"],["X","Contraindicated","Warfarin, Isotretinoin, MTX"]] }
+    id:"4.2", section:"Clinical Sciences", title:"Pregnancy & Lactation", color:"#ef4444",
+    blocks:[
+      { type:"text", content:"Pregnancy alters drug pharmacokinetics: ↑ Vd from increased plasma volume, ↑ renal clearance, ↑ hepatic metabolism. Most importantly, drugs can cross the placenta and harm the fetus." },
+      { type:"table", headers:["FDA Category","Meaning","Examples"], rows:[
+        ["A","Adequate human studies — no risk","Folic acid, Levothyroxine"],
+        ["B","Animal studies safe; no adequate human data","Metformin, Penicillins, Metronidazole (after 1st trimester)"],
+        ["C","Animal risk; no human data — benefit may outweigh","Fluconazole single-dose, Verapamil"],
+        ["D","Human risk evidence — benefit may justify","Phenytoin, Lithium, Tetracyclines (>3rd trim)"],
+        ["X","Contraindicated","Warfarin, Isotretinoin, Methotrexate, Thalidomide"],
+      ]},
+      { type:"alert", label:"🤰 First-line HTN in Pregnancy", content:"Methyldopa, Labetalol, Nifedipine. AVOID ACE-I/ARB (fetal renal damage, oligohydramnios)." },
+      { type:"text", content:"Folic acid 0.4 mg/day starting 1 MONTH BEFORE conception prevents neural tube defects (spina bifida). Increase to 4 mg/day if prior NTD pregnancy. Neural tube closes by day 28 — often before woman knows she's pregnant." },
+    ]
   },
   {
-    id:"4.3", section:"Clinical Sciences", title:"Pediatric Pharmacotherapy",
-    color:"#ef4444",
-    summary:"Children ≠ small adults. Immature CYP enzymes + renal function. Always use weight-based dosing (mg/kg), cap at max adult dose.",
-    keyPoints:[
-      "Tetracyclines <8 years: tooth discoloration + bone growth depression",
-      "Fluoroquinolones <18 years: cartilage damage",
-      "Aspirin <18 years with viral illness: Reye's syndrome (liver failure + encephalopathy)",
-      "Codeine <12 years: ultra-rapid CYP2D6 metabolizers → fatal respiratory depression",
-      "Honey <1 year: infant botulism",
-      "Chloramphenicol in neonates: Gray Baby Syndrome (cardiovascular collapse)",
-      "Promethazine <2 years: fatal respiratory depression",
-    ],
-    table:{ headers:["Drug","Age restriction","Reason"], rows:[["Tetracyclines","<8 years","Teeth/bone damage"],["Fluoroquinolones","<18 years","Cartilage damage"],["Aspirin","<18 + viral illness","Reye's syndrome"],["Codeine","<12 years","Fatal respiratory depression"],["Honey","<1 year","Infant botulism"]] }
+    id:"4.3", section:"Clinical Sciences", title:"Pediatric Pharmacotherapy", color:"#ef4444",
+    blocks:[
+      { type:"text", content:"Children are NOT small adults. Hepatic enzymes mature gradually, renal function develops over 12 months, and body composition differs. Always use weight-based dosing (mg/kg) AND verify against max adult dose." },
+      { type:"table", headers:["Drug","Restriction","Reason"], rows:[
+        ["Tetracyclines","< 8 years","Tooth discoloration, bone growth depression"],
+        ["Fluoroquinolones","< 18 years (generally)","Cartilage damage"],
+        ["Aspirin","< 18 years with viral illness","Reye's syndrome (acute liver failure + encephalopathy)"],
+        ["Codeine","< 12 years (avoid)","Ultra-rapid metabolizers → fatal respiratory depression"],
+        ["Honey","< 1 year","Infant botulism"],
+        ["Chloramphenicol","Neonates","Gray Baby Syndrome (cardiovascular collapse)"],
+        ["Promethazine","< 2 years","Fatal respiratory depression"],
+      ]},
+      { type:"alert", label:"🧪 Neonatal Concerns", content:"Immature CYP enzymes (especially CYP2D6, CYP3A4) + glucuronidation in <1 month → drug accumulation. Use neonatal-specific dosing references." },
+    ]
   },
   {
-    id:"4.4", section:"Clinical Sciences", title:"Hypertension Management",
-    color:"#ef4444",
-    summary:"Target BP <130/80 (AHA/ACC 2017) in most adults. ACE-I cough: 5–20% → switch to ARB.",
-    keyPoints:[
-      "ACE-I (Ramipril): HF, post-MI, CKD+proteinuria, DM — avoid: pregnancy, bilateral RAS, hyperkalemia",
-      "ARB (Losartan): same as ACE-I, no cough — avoid: pregnancy",
-      "CCB-DHP (Amlodipine): elderly, angina, isolated systolic HTN — avoid: HFrEF",
-      "Thiazide (HCTZ): elderly, Black patients — avoid: gout, hypokalemia",
-      "Beta-blocker: post-MI, HF, angina — avoid: asthma, AV block, bradycardia",
-      "HTN urgency (>180/120, no organ damage): gradual ↓ over 24–48h with oral agents",
-      "HTN emergency (+ organ damage): IV agents, ICU, ↓MAP by 25% in 1h",
-    ],
-    table:{ headers:["Class","First-line for","Avoid in"], rows:[["ACE-I","HF, CKD, DM","Pregnancy, bilateral RAS"],["ARB","ACE-I cough","Pregnancy"],["CCB-DHP","Elderly, angina","HFrEF"],["Thiazide","Elderly, Black","Gout"],["Beta-blocker","Post-MI, HF","Asthma, AV block"]] }
+    id:"4.4", section:"Clinical Sciences", title:"Hypertension Management", color:"#ef4444",
+    blocks:[
+      { type:"text", content:"Hypertension affects 1 in 4 adults and is a major risk factor for stroke, MI, HF, and CKD. Target BP per AHA/ACC 2017: <130/80 in most adults. Diabetes/CKD: <130/80." },
+      { type:"table", headers:["Class","First-line For","Avoid In"], rows:[
+        ["ACE-I (Ramipril)","HF, post-MI, CKD with proteinuria, DM","Pregnancy, bilateral RAS, hyperkalemia"],
+        ["ARB (Losartan)","Same as ACE-I, ACE-I cough","Pregnancy"],
+        ["CCB-DHP (Amlodipine)","Elderly, angina, isolated systolic HTN","HFrEF"],
+        ["Thiazide (HCTZ)","Elderly, Black patients","Gout, hypokalemia, hyponatremia"],
+        ["Beta-blocker (Metoprolol)","Post-MI, HF, angina, tachyarrhythmias","Asthma, AV block 2/3°, bradycardia"],
+      ]},
+      { type:"alert", label:"💊 ACE-I Cough", content:"5–20% of ACE-I users develop dry cough from bradykinin accumulation. Switch to ARB (no effect on bradykinin) — same BP benefit." },
+      { type:"text", content:"Hypertensive urgency (BP >180/120, no end-organ damage): gradual reduction over 24–48 hr with oral agents. Hypertensive emergency (with end-organ damage): IV agents, ICU monitoring, reduce MAP by 25% in 1 hour." },
+    ]
   },
   {
-    id:"4.5", section:"Clinical Sciences", title:"Type 2 Diabetes Mellitus",
-    color:"#ef4444",
-    summary:"First-line: Metformin. SGLT2-i + GLP-1 RA have CV/renal mortality benefit. HbA1c target: <7% most adults.",
-    keyPoints:[
-      "Metformin: ↓hepatic gluconeogenesis, first-line, weight neutral — stop at CrCl <30 (lactic acidosis); hold before contrast",
-      "SGLT2-i (Empagliflozin): ↑urinary glucose, CV + renal protection, weight loss — SE: genital infections, euglycemic DKA",
-      "GLP-1 RA (Semaglutide): ↑insulin (glucose-dep), weight loss, CV benefit — SE: pancreatitis, nausea",
-      "Sulfonylureas: ↑insulin secretion, cheap — SE: hypoglycemia + weight gain",
-      "Prefer SGLT2-i or GLP-1 RA in ASCVD, HF, or CKD regardless of A1c",
-      "HbA1c targets: most adults <7% | elderly/frail <8% | young/healthy <6.5%",
-    ],
-    table:{ headers:["Drug","Mechanism","Key Benefit","Warning"], rows:[["Metformin","↓Gluconeogenesis","First-line, weight neutral","Hold if CrCl<30"],["SGLT2-i","↑Urine glucose","CV+renal protection","Genital infections, DKA"],["GLP-1 RA","↑Insulin (glucose-dep)","Weight loss, CV benefit","Pancreatitis"],["Sulphonylureas","↑Insulin secretion","Cheap, effective","Hypoglycemia, weight↑"]] }
+    id:"4.5", section:"Clinical Sciences", title:"Type 2 Diabetes Mellitus", color:"#ef4444",
+    blocks:[
+      { type:"table", headers:["Drug","Mechanism","Key Benefit","Key Warning"], rows:[
+        ["Metformin","↓ Hepatic gluconeogenesis","First-line; weight neutral; CV safe","Stop at CrCl <30 (lactic acidosis); hold before contrast"],
+        ["SGLT2-i (Empagliflozin)","↑ Urinary glucose excretion","CV & renal protection; weight loss; BP↓","Genital mycotic infections; euglycemic DKA"],
+        ["GLP-1 RA (Semaglutide)","↑ Insulin (glucose-dep); ↓ glucagon","Weight loss; CV benefit","Pancreatitis (rare); nausea"],
+        ["DPP-4i (Sitagliptin)","↑ Incretins","Weight neutral; renal safe with adjustment","Pancreatitis (rare)"],
+        ["Sulphonylureas (Glibenclamide)","↑ Insulin secretion","Cheap, effective","HYPOGLYCEMIA risk; weight gain"],
+        ["Pioglitazone (TZD)","↑ Insulin sensitivity","Effective in insulin resistance","Weight gain, edema, HF, bladder cancer risk"],
+        ["Insulin","Direct glucose lowering","Most potent","Hypoglycemia; weight gain; injection"],
+      ]},
+      { type:"formula", label:"HbA1c Targets", lines:["Most adults: <7%", "Elderly/frail/comorbidities: <8%", "Young/healthy: <6.5%", "Avoid hypoglycemia in elderly"] },
+      { type:"text", content:"SGLT2 inhibitors and GLP-1 RAs have CV/renal mortality benefits independent of glucose lowering. Prefer them in patients with established ASCVD, HF, or CKD — regardless of A1c." },
+    ]
   },
   {
-    id:"4.6", section:"Clinical Sciences", title:"Antibiotic Selection by Pathogen",
-    color:"#ef4444",
-    summary:"Always de-escalate based on culture results. MRSA: Vancomycin IV. Pseudomonas: Pip-Tazo/Cefepime/Meropenem.",
-    keyPoints:[
-      "MSSA: Cloxacillin/Nafcillin/Cefazolin — NOT Amoxicillin alone",
-      "MRSA: Vancomycin IV (AUC/MIC 400–600) | Alternative: Linezolid, Daptomycin",
-      "Pseudomonas (severe): Pip-Tazo + Aminoglycoside — combine 2 agents",
-      "C. difficile: Vancomycin PO or Fidaxomicin (Metronidazole no longer preferred)",
-      "TB (RIPE): Rifampicin + INH + Pyrazinamide + Ethambutol × 6 months",
-      "H. pylori: PPI + Amoxicillin + Clarithromycin × 14 days",
-      "E. coli UTI: Nitrofurantoin/TMP-SMX (avoid empiric FQ)",
-    ],
-    table:{ headers:["Pathogen","First-line","Avoid"], rows:[["MRSA","Vancomycin IV","Amoxicillin"],["Pseudomonas","Pip-Tazo + Aminoglycoside","Ceftriaxone, Amoxicillin"],["C. difficile","Vancomycin PO / Fidaxomicin","Metronidazole (not preferred)"],["TB","RIPE × 6 months","Monotherapy"],["H. pylori","PPI + Amox + Clarithromycin","—"]] }
+    id:"4.6", section:"Clinical Sciences", title:"Antibiotic Selection by Pathogen", color:"#ef4444",
+    blocks:[
+      { type:"table", headers:["Pathogen","First-line","Alternative","Notes"], rows:[
+        ["MSSA","Cloxacillin / Nafcillin / Cefazolin","Clindamycin","NOT Amoxicillin alone (beta-lactamase)"],
+        ["MRSA","Vancomycin IV","Linezolid, Daptomycin (NOT in pneumonia)","TDM with AUC/MIC 400–600"],
+        ["Strep pneumoniae","Amoxicillin / Penicillin G","Ceftriaxone, Levofloxacin","Check local resistance"],
+        ["E. coli UTI","Nitrofurantoin / TMP-SMX","Ciprofloxacin (if susceptible)","Avoid empiric FQ"],
+        ["Pseudomonas","Pip-Tazo, Cefepime, Meropenem","Cipro, Aminoglycosides","Combine 2 agents in severe"],
+        ["C. difficile","Vancomycin PO / Fidaxomicin","Bezlotoxumab (recurrence prevention)","Metronidazole no longer preferred"],
+        ["TB (drug-sensitive)","RIPE: Rifampicin + INH + Pyrazinamide + Ethambutol","Individualized for MDR-TB","6 months total; DOT often required"],
+        ["H. pylori","PPI + Amoxicillin + Clarithromycin × 14d","Quadruple therapy with bismuth","Test of cure 4 weeks after"],
+      ]},
+      { type:"alert", label:"💊 Penicillin Allergy", content:"Verify true allergy (rash + tongue swelling, anaphylaxis) vs intolerance (GI upset). True allergy → alternatives: macrolides, doxycycline, or cephalosporin if rash only (cross-reactivity ~1–3%)." },
+    ]
   },
   {
-    id:"4.7", section:"Clinical Sciences", title:"Anticoagulation Therapy",
-    color:"#ef4444",
-    summary:"UFH: aPTT 60–90s → Protamine. LMWH: Anti-Xa. Warfarin: INR 2–3. DOACs: preferred in AF (no monitoring).",
-    keyPoints:[
-      "HIT: platelets ↓5–10 days after heparin → PARADOXICAL thrombosis. Stop ALL heparin → Argatroban/DOAC",
-      "Warfarin reversal: Vit K (onset 6–12h) + 4F-PCC (active bleeding)",
-      "Dabigatran reversal: Idarucizumab (Praxbind)",
-      "Rivaroxaban/Apixaban reversal: Andexanet alfa",
-      "INR 2–3: most indications | 2.5–3.5: mechanical mitral valve",
-      "CHA₂DS₂-VASc ≥2 (men) or ≥3 (women) → anticoagulate in AF → prefer DOACs",
-    ],
-    table:{ headers:["Drug","Mechanism","Monitoring","Reversal"], rows:[["UFH","Antithrombin III","aPTT","Protamine"],["LMWH","Factor Xa","Anti-Xa (special cases)","Protamine (60%)"],["Warfarin","Vit K factors II,VII,IX,X","INR","Vit K + 4F-PCC"],["DOACs","Xa or IIa","None routine","Andexanet/Idarucizumab"]] }
+    id:"4.7", section:"Clinical Sciences", title:"Anticoagulation Therapy", color:"#ef4444",
+    blocks:[
+      { type:"table", headers:["Drug","Mechanism","Monitoring","Reversal"], rows:[
+        ["UFH (Heparin)","Activates Antithrombin III → ↓ IIa, Xa","aPTT (target 60–90s)","Protamine Sulfate"],
+        ["LMWH (Enoxaparin)","↓ Factor Xa primarily","Anti-Xa (in CKD, pregnancy, obesity)","Protamine (60% effective)"],
+        ["Warfarin","↓ Vitamin K factors II, VII, IX, X","INR (2–3 most; 2.5–3.5 mechanical valve)","Vit K + 4-factor PCC"],
+        ["Rivaroxaban, Apixaban","Direct Factor Xa inhibitors (DOAC)","No routine TDM","Andexanet alfa"],
+        ["Dabigatran","Direct thrombin (IIa) inhibitor (DOAC)","No routine TDM","Idarucizumab (Praxbind)"],
+      ]},
+      { type:"formula", label:"CHA₂DS₂-VASc", lines:["Score ≥2 (men) or ≥3 (women) → anticoagulate in AF","DOACs preferred over Warfarin (better safety, no monitoring)"] },
+      { type:"alert", label:"⚠️ HIT — Heparin-Induced Thrombocytopenia", content:"Platelets drop 5–10 days after heparin exposure. PARADOXICALLY causes thrombosis (not bleeding). Stop ALL heparin (including LMWH and flushes). Use Argatroban, Bivalirudin, Fondaparinux, or DOAC." },
+    ]
   },
   {
-    id:"4.8", section:"Clinical Sciences", title:"Asthma & COPD Management",
-    color:"#ef4444",
-    summary:"GINA: SABA monotherapy no longer recommended. Prefer ICS-Formoterol PRN. COPD GOLD stages by FEV1%.",
-    keyPoints:[
-      "GINA Step 1: ICS-Formoterol PRN | Step 2: Low-dose ICS daily | Step 3: Low-dose ICS+LABA",
-      "Step 4: Medium-high ICS+LABA+/-LAMA | Step 5: Add biologic (Omalizumab anti-IgE, Mepolizumab anti-IL5)",
-      "LABA NEVER as monotherapy in asthma → ↑ asthma death risk",
-      "COPD GOLD 1: FEV1 ≥80% | GOLD 2: 50–80% | GOLD 3: 30–50% | GOLD 4: <30%",
-      "COPD exacerbation: SABA + systemic steroids 5 days + antibiotics if purulent sputum",
-      "Acute asthma attack reliever: Salbutamol (SABA) inhaler/nebulizer",
-    ],
-    table:{ headers:["GINA Step","Severity","Controller"], rows:[["1","Intermittent","ICS-Formoterol PRN"],["2","Mild persistent","Low-dose ICS daily"],["3","Mild-moderate","Low-dose ICS + LABA"],["4","Moderate-severe","Medium-high ICS + LABA ± LAMA"],["5","Severe","+ Biologic"]] }
+    id:"4.8", section:"Clinical Sciences", title:"Asthma & COPD Management", color:"#ef4444",
+    blocks:[
+      { type:"text", content:"Asthma is reversible airway inflammation triggered by allergens/exercise. COPD is irreversible airflow limitation from smoking. Both share bronchodilator therapy but differ in steroid responsiveness and prognosis." },
+      { type:"table", headers:["GINA Step","Severity","Preferred Controller","Reliever"], rows:[
+        ["1","Intermittent","Low-dose ICS-Formoterol PRN","SABA or ICS-Formoterol"],
+        ["2","Mild persistent","Low-dose ICS daily","SABA or ICS-Formoterol PRN"],
+        ["3","Mild-moderate","Low-dose ICS + LABA","SABA or ICS-Formoterol PRN"],
+        ["4","Moderate-severe","Medium-high ICS + LABA +/− LAMA","SABA or ICS-Formoterol PRN"],
+        ["5","Severe","Add biologic (anti-IgE: Omalizumab, anti-IL5: Mepolizumab)","Same"],
+      ]},
+      { type:"alert", label:"⚠️ GINA Update", content:"SABA monotherapy NO LONGER recommended — associated with ↑ asthma deaths. Prefer ICS-Formoterol PRN as reliever (anti-inflammatory effect)." },
+      { type:"table", headers:["GOLD Stage","FEV1 % Predicted"], rows:[
+        ["GOLD 1 (Mild)","≥ 80%"],
+        ["GOLD 2 (Moderate)","50–80%"],
+        ["GOLD 3 (Severe)","30–50%"],
+        ["GOLD 4 (Very severe)","< 30%"],
+      ]},
+    ]
   },
   {
-    id:"4.9", section:"Clinical Sciences", title:"Major Drug-Drug Interactions",
-    color:"#ef4444",
-    summary:"Most DDIs: CYP450 induction/inhibition, P-gp, or pharmacodynamic synergy. ~5% of hospital admissions.",
-    keyPoints:[
-      "Warfarin + Rifampicin: ↑CYP2C9 induction → ↓INR → thrombosis",
-      "Warfarin + Fluconazole/Metronidazole: inhibit CYP2C9 → ↑INR → bleeding",
-      "Statins + Erythromycin/Itraconazole: ↑statin → rhabdomyolysis → use Rosuvastatin/Pravastatin",
-      "Clopidogrel + Omeprazole/Esomeprazole: ↓activation via CYP2C19 → switch to Pantoprazole",
-      "Digoxin + Amiodarone/Verapamil: ↑digoxin × 2 → ↓dose 50% + monitor",
-      "SSRI + Tramadol/MAOI: Serotonin syndrome (mental status ↓ + autonomic instability + clonus)",
-      "Fluoroquinolones + Antacids/Iron/Calcium: chelation → ↓FQ absorption → separate by 2–4h",
-    ],
-    table:{ headers:["Object Drug","Precipitant","Effect","Action"], rows:[["Warfarin","Rifampicin","↓INR → thrombosis","↑Warfarin dose"],["Warfarin","Fluconazole","↑INR → bleeding","↓Warfarin ~50%"],["Statins","Erythromycin","↑statin → rhabdomyo","Rosuvastatin/Pravastatin"],["Clopidogrel","Omeprazole","↓activation","Switch to Pantoprazole"],["Digoxin","Amiodarone","↑Digoxin ×2","↓dose 50%"]] }
+    id:"4.9", section:"Clinical Sciences", title:"Major Drug-Drug Interactions", color:"#ef4444",
+    blocks:[
+      { type:"table", headers:["Object Drug","Precipitant","Effect","Action"], rows:[
+        ["Warfarin","Rifampicin","↓ INR → thrombosis","↑ Warfarin dose; monitor INR"],
+        ["Warfarin","Fluconazole / Metronidazole","↑ INR → bleeding","↓ Warfarin dose ~50%; monitor"],
+        ["Statins","Erythromycin / Itraconazole","↑ Statin → rhabdomyolysis","Use Rosuvastatin/Pravastatin"],
+        ["Methotrexate","NSAIDs","↓ MTX clearance → toxicity","Avoid combination"],
+        ["Digoxin","Amiodarone / Verapamil","↑ Digoxin × 2","↓ Digoxin 50%; monitor"],
+        ["ACE-I","K-sparing diuretic / K supplement","Hyperkalemia","Monitor K⁺"],
+        ["Clopidogrel","Omeprazole / Esomeprazole","↓ Clopidogrel activation (CYP2C19)","Switch to Pantoprazole/Rabeprazole"],
+        ["Fluoroquinolones","Antacids / Iron / Calcium","Chelation → ↓ FQ absorption","Separate doses by 2–4 hr"],
+        ["SSRI","Tramadol / MAOI","Serotonin syndrome","Avoid combination"],
+        ["MAOIs","Tyramine foods (cheese, wine)","Hypertensive crisis","Dietary counseling"],
+      ]},
+      { type:"alert", label:"⚠️ Serotonin Syndrome", content:"Triad: mental status change + autonomic instability + neuromuscular hyperactivity (clonus, hyperreflexia). Causes: SSRI + Tramadol, SSRI + MAOI, SSRI + Linezolid. Treat: stop drugs, supportive care, Cyproheptadine if severe." },
+    ]
   },
 ];
 
 // ===================== STUDY MATERIALS SCREEN =====================
-function StudyMaterialsScreen({ onBack, onStartStudy }) {
-  const [selected, setSelected] = useState(null);
+// ===================== STUDY MATERIALS + SESSION (integrated flow) =====================
+function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
+  // phase: "list" | "section" | "lesson" | "questions"
+  const [phase, setPhase] = useState("list");
+  const [activeSection, setActiveSection] = useState(null);
+  const [activeLesson, setActiveLesson] = useState(null);
+  const [lessonIdx, setLessonIdx] = useState(0); // which lesson within section
+  const [sectionPhase, setSectionPhase] = useState("lesson"); // "lesson" | "questions"
+  const [cur, setCur] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [showExp, setShowExp] = useState(false);
+
   const secColors = { "Basic Biomedical Sciences":"#3b82f6","Pharmaceutical Sciences":"#10b981","Social/Behavioral/Administrative Sciences":"#8b5cf6","Clinical Sciences":"#ef4444" };
-
-  if (selected) {
-    const lesson = STUDY_LESSONS.find(l => l.id === selected);
-    return (
-      <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
-        <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.08)", padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
-          <button onClick={()=>setSelected(null)} style={{ ...S.ghost, padding:"6px 12px", fontSize:13 }}>← Back</button>
-          <div style={{ color:lesson.color, fontWeight:800 }}>Lesson {lesson.id}: {lesson.title}</div>
-        </div>
-        <div style={{ maxWidth:760, margin:"0 auto", padding:24 }}>
-          {/* Summary box */}
-          <div style={{ background:lesson.color+"15", border:`1px solid ${lesson.color}44`, borderRadius:14, padding:18, marginBottom:20 }}>
-            <div style={{ color:lesson.color, fontWeight:700, fontSize:13, marginBottom:8 }}>📌 Core Concept</div>
-            <p style={{ color:"#e2e8f0", fontSize:14, lineHeight:1.7, margin:0 }}>{lesson.summary}</p>
-          </div>
-
-          {/* Key points */}
-          <div style={{ ...S.card, marginBottom:20 }}>
-            <div style={{ fontWeight:700, fontSize:15, marginBottom:14, color:lesson.color }}>🎯 Key Points</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {lesson.keyPoints.map((pt,i)=>(
-                <div key={i} style={{ display:"flex", gap:10, padding:"10px 14px", background:"rgba(255,255,255,0.03)", borderRadius:10, borderLeft:`3px solid ${lesson.color}` }}>
-                  <span style={{ color:lesson.color, fontWeight:800, flexShrink:0 }}>{i+1}.</span>
-                  <span style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.6 }}>{pt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Table */}
-          {lesson.table && (
-            <div style={{ ...S.card, marginBottom:24, padding:0, overflow:"hidden" }}>
-              <div style={{ padding:"12px 16px", background:lesson.color+"18", fontWeight:700, fontSize:14, color:lesson.color }}>📊 Quick Reference Table</div>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                <thead><tr style={{ background:"rgba(255,255,255,0.05)" }}>
-                  {lesson.table.headers.map(h=><th key={h} style={{ padding:"10px 14px", textAlign:"left", color:"#64748b", fontWeight:600, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>{h}</th>)}
-                </tr></thead>
-                <tbody>{lesson.table.rows.map((row,i)=>(
-                  <tr key={i} style={{ borderBottom:"1px solid rgba(255,255,255,0.05)" }}>
-                    {row.map((cell,j)=><td key={j} style={{ padding:"9px 14px", color:j===0?"#f1f5f9":"#94a3b8", fontWeight:j===0?600:400 }}>{cell}</td>)}
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          )}
-
-          <button onClick={onStartStudy} style={{ ...S.btn("#10b981"), width:"100%", padding:14, fontSize:15 }}>
-            📝 Start Study Session with Questions →
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Lesson list grouped by section
+  const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
   const grouped = {};
   STUDY_LESSONS.forEach(l => { if(!grouped[l.section]) grouped[l.section]=[]; grouped[l.section].push(l); });
+  const sections = Object.keys(grouped);
 
-  return (
+  // Get questions for this section
+  const getSectionQuestions = (section) => {
+    const pool = allQuestions.filter(q => q.section === section);
+    return [...pool].sort(() => Math.random() - 0.5).slice(0, 10);
+  };
+
+  const startSection = (section) => {
+    setActiveSection(section);
+    setLessonIdx(0);
+    setSectionPhase("lesson");
+    setActiveLesson(grouped[section][0]);
+    setCur(0); setAnswers({}); setShowExp(false);
+    setPhase("section");
+  };
+
+  const goNextLesson = () => {
+    const lessons = grouped[activeSection];
+    if (lessonIdx + 1 < lessons.length) {
+      setLessonIdx(p => p+1);
+      setActiveLesson(lessons[lessonIdx+1]);
+      setSectionPhase("lesson");
+    } else {
+      // all lessons done — show questions
+      setSectionPhase("questions");
+      setCur(0); setAnswers({}); setShowExp(false);
+    }
+  };
+
+  const color = activeSection ? (secColors[activeSection] || "#3b82f6") : "#3b82f6";
+  const sectionQuestions = activeSection ? getSectionQuestions(activeSection) : [];
+
+  // ── PHASE: LIST ─────────────────────────────────────────────
+  if (phase === "list") return (
     <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
       <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.08)", padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
-        <button onClick={onBack} style={{ ...S.ghost, padding:"6px 12px", fontSize:13 }}>← Dashboard</button>
+        <button onClick={onBack} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Dashboard</button>
         <div style={{ fontWeight:800, fontSize:16 }}>📚 Study Materials</div>
-        <div style={{ marginLeft:"auto", color:"#64748b", fontSize:12 }}>{STUDY_LESSONS.length} Lessons · 23 Topics</div>
+        <div style={{ marginLeft:"auto", color:"#64748b", fontSize:12 }}>{STUDY_LESSONS.length} Lessons</div>
       </div>
-      <div style={{ maxWidth:760, margin:"0 auto", padding:24 }}>
+      <div style={{ maxWidth:720, margin:"0 auto", padding:24 }}>
         <div style={{ ...S.card, marginBottom:24, background:"rgba(16,185,129,0.06)", border:"1px solid rgba(16,185,129,0.3)" }}>
           <div style={{ display:"flex", gap:14, alignItems:"center" }}>
             <div style={{ fontSize:36 }}>📖</div>
             <div>
               <div style={{ fontWeight:800, fontSize:16, color:"#10b981" }}>SPLE Study Material</div>
-              <div style={{ color:"#64748b", fontSize:13, marginTop:4 }}>23 lessons covering all 4 SCFHS domains · Per SCFHS Blueprint</div>
+              <div style={{ color:"#64748b", fontSize:13, marginTop:4 }}>اختر قسماً للبدء — ستظهر دروس القسم ثم أسئلة تطبيقية</div>
               <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
                 {[["10%","Basic Biomedical","#3b82f6"],["35%","Pharmaceutical","#10b981"],["20%","Social/Admin","#8b5cf6"],["35%","Clinical","#ef4444"]].map(([pct,label,c])=>(
                   <span key={label} style={{ background:c+"18", color:c, fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:20 }}>{pct} {label}</span>
@@ -1213,33 +1247,186 @@ function StudyMaterialsScreen({ onBack, onStartStudy }) {
           </div>
         </div>
 
-        {Object.entries(grouped).map(([section, lessons])=>(
-          <div key={section} style={{ marginBottom:24 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-              <div style={{ width:4, height:20, background:secColors[section], borderRadius:2 }} />
-              <div style={{ fontWeight:700, fontSize:14, color:secColors[section] }}>{section}</div>
-              <div style={{ color:"#475569", fontSize:12 }}>({lessons.length} lessons)</div>
+        {sections.map(section => {
+          const c = secColors[section];
+          const lessons = grouped[section];
+          return (
+            <div key={section} style={{ ...S.card, marginBottom:16, border:`1px solid ${c}33`, cursor:"pointer" }}
+              onClick={()=>startSection(section)}>
+              <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                <div style={{ width:48, height:48, borderRadius:14, background:c+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>
+                  {section==="Basic Biomedical Sciences"?"🔬":section==="Pharmaceutical Sciences"?"💊":section==="Social/Behavioral/Administrative Sciences"?"⚖️":"🏥"}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:800, fontSize:15, color:c }}>{section}</div>
+                  <div style={{ color:"#64748b", fontSize:12, marginTop:3 }}>{lessons.length} lessons · {lessons.map(l=>l.title).slice(0,2).join(", ")}{lessons.length>2?` +${lessons.length-2} more`:""}</div>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ background:c+"22", color:c, fontSize:11, fontWeight:700, padding:"4px 10px", borderRadius:20 }}>{BLUEPRINT[section]?.pct}% of SPLE</div>
+                  <div style={{ color:c, fontSize:20, marginTop:4 }}>→</div>
+                </div>
+              </div>
             </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {lessons.map(l=>(
-                <button key={l.id} onClick={()=>setSelected(l.id)} style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${l.color}22`, borderRadius:12, padding:"14px 18px", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:14, transition:"all 0.2s" }}
-                  onMouseEnter={e=>{e.currentTarget.style.background=`${l.color}12`; e.currentTarget.style.borderColor=`${l.color}55`;}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor=`${l.color}22`;}}>
-                  <div style={{ width:36, height:36, borderRadius:10, background:l.color+"22", display:"flex", alignItems:"center", justifyContent:"center", color:l.color, fontWeight:800, fontSize:13, flexShrink:0 }}>{l.id}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:700, color:"#f1f5f9", fontSize:14 }}>{l.title}</div>
-                    <div style={{ color:"#64748b", fontSize:12, marginTop:2 }}>{l.keyPoints.length} key points · Click to study</div>
-                  </div>
-                  <div style={{ color:l.color, fontSize:18 }}>→</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
+
+  // ── PHASE: SECTION (lessons + questions) ─────────────────────
+  if (phase === "section") {
+    const lessons = grouped[activeSection];
+
+    // — show lesson material —
+    if (sectionPhase === "lesson" && activeLesson) {
+      const l = activeLesson;
+      const isLastLesson = lessonIdx === lessons.length - 1;
+
+      const renderBlock = (block, i) => {
+        if (block.type === "text") return (
+          <p key={i} style={{ color:"#cbd5e1", fontSize:14, lineHeight:1.8, margin:"0 0 16px" }}>{block.content}</p>
+        );
+        if (block.type === "formula") return (
+          <div key={i} style={{ background:color+"12", border:`1px solid ${color}44`, borderRadius:12, padding:"14px 18px", marginBottom:16 }}>
+            <div style={{ color:color, fontWeight:700, fontSize:12, marginBottom:10, textTransform:"uppercase", letterSpacing:1 }}>{block.label}</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              {block.lines.map((line,j)=>(
+                <div key={j} style={{ background:"rgba(0,0,0,0.25)", borderRadius:8, padding:"8px 14px", fontFamily:"monospace", fontSize:13, color:"#f1f5f9", fontWeight:600 }}>{line}</div>
+              ))}
+            </div>
+          </div>
+        );
+        if (block.type === "alert") return (
+          <div key={i} style={{ background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.35)", borderRadius:12, padding:"14px 18px", marginBottom:16, display:"flex", gap:12 }}>
+            <span style={{ fontSize:18, flexShrink:0 }}>💡</span>
+            <div>
+              <div style={{ color:"#f59e0b", fontWeight:700, fontSize:13, marginBottom:4 }}>{block.label}</div>
+              <div style={{ color:"#fde68a", fontSize:13, lineHeight:1.7 }}>{block.content}</div>
+            </div>
+          </div>
+        );
+        if (block.type === "table") return (
+          <div key={i} style={{ marginBottom:16, borderRadius:12, overflow:"hidden", border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+                <thead>
+                  <tr style={{ background:color+"22" }}>
+                    {block.headers.map((h,j)=>(
+                      <th key={j} style={{ padding:"10px 14px", textAlign:"left", color:color, fontWeight:700, borderBottom:`1px solid ${color}33`, whiteSpace:"nowrap", fontSize:12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row,j)=>(
+                    <tr key={j} style={{ borderBottom:"1px solid rgba(255,255,255,0.06)", background:j%2===0?"rgba(255,255,255,0.02)":"transparent" }}>
+                      {row.map((cell,k)=>(
+                        <td key={k} style={{ padding:"10px 14px", color:k===0?"#f1f5f9":"#94a3b8", fontWeight:k===0?600:400, lineHeight:1.5, fontSize:13 }}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+        return null;
+      };
+
+      return (
+        <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+          <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:`1px solid ${color}33`, padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
+            <button onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(p=>p-1); setActiveLesson(lessons[lessonIdx-1]); }}} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Back</button>
+            <div>
+              <div style={{ color:color, fontWeight:800, fontSize:14 }}>Lesson {l.id}: {l.title}</div>
+              <div style={{ color:"#475569", fontSize:11 }}>{l.section}</div>
+            </div>
+            <div style={{ marginLeft:"auto", color:"#475569", fontSize:12 }}>{lessonIdx+1} / {lessons.length}</div>
+          </div>
+          <div style={{ height:3, background:"rgba(255,255,255,0.06)" }}>
+            <div style={{ width:`${((lessonIdx+1)/lessons.length)*100}%`, height:"100%", background:color, transition:"width 0.4s" }} />
+          </div>
+          <div style={{ maxWidth:800, margin:"0 auto", padding:"24px 24px 40px" }}>
+            {/* Lesson header like PDF */}
+            <div style={{ borderBottom:`2px solid ${color}`, paddingBottom:12, marginBottom:24 }}>
+              <div style={{ color:color, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:2, marginBottom:4 }}>{l.section}</div>
+              <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:"#f1f5f9" }}>Lesson {l.id}: {l.title}</h2>
+            </div>
+            {/* Render all blocks */}
+            {l.blocks.map((block, i) => renderBlock(block, i))}
+            <div style={{ marginTop:24 }}>
+              <button onClick={goNextLesson} style={{ ...S.btn(color), width:"100%", padding:14, fontSize:15 }}>
+                {isLastLesson ? `✅ Finish — Start Practice Questions →` : `Next: ${lessons[lessonIdx+1]?.title} →`}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // — show questions for this section —
+    if (sectionPhase === "questions") {
+      const q = sectionQuestions[cur];
+      if (!q) {
+        // no questions available
+        return (
+          <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
+            <div style={{ fontSize:48 }}>📭</div>
+            <div style={{ fontWeight:700, fontSize:18 }}>No questions available for this section yet.</div>
+            <button onClick={()=>setPhase("list")} style={{ ...S.ghost, padding:"10px 24px" }}>← Back to Sections</button>
+          </div>
+        );
+      }
+      const answered = answers[q.id] !== undefined;
+      const correct = answers[q.id] === q.answer;
+      const col = SC[q.section] || { accent:color, bg:"#1e2a3a" };
+      const next = () => {
+        setShowExp(false);
+        if (cur < sectionQuestions.length-1) setCur(p=>p+1);
+        else setPhase("list"); // back to section list after finishing
+      };
+      const sectionIdx = sections.indexOf(activeSection);
+      return (
+        <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+          <div style={{ background:col.bg||"#1e2a3a", borderBottom:`1px solid ${color}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>← Lessons</button>
+              <span style={{ color:"#94a3b8", fontSize:13 }}>Practice Q {cur+1}/{sectionQuestions.length}</span>
+            </div>
+            <span style={{ background:color+"22", color:color, fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📝 {activeSection.split(" ")[0]} Questions</span>
+            <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
+          </div>
+          <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/sectionQuestions.length)*100}%`, height:"100%", background:color, transition:"width 0.3s" }} /></div>
+          <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
+            <div style={{ color:color, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
+            <div style={{ ...S.card, border:`1px solid ${color}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
+            <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
+              {q.options.map((opt,i)=>{
+                let bg="rgba(255,255,255,0.04)",border="1px solid rgba(255,255,255,0.1)",c="#e2e8f0";
+                if(answered){ if(i===q.answer){bg="rgba(34,197,94,0.12)";border="1.5px solid #22c55e";c="#86efac";} else if(i===answers[q.id]){bg="rgba(239,68,68,0.12)";border="1.5px solid #ef4444";c="#fca5a5";} }
+                return <button key={i} onClick={()=>{ if(!answered){setAnswers(p=>({...p,[q.id]:i})); setShowExp(true);}}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
+                  <span style={{ width:26,height:26,borderRadius:7,background:"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
+                  {opt}
+                  {answered&&i===q.answer&&<span style={{ marginLeft:"auto" }}>✓</span>}
+                  {answered&&i===answers[q.id]&&i!==q.answer&&<span style={{ marginLeft:"auto" }}>✗</span>}
+                </button>;
+              })}
+            </div>
+            {showExp && <div style={{ background:correct?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1px solid ${correct?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
+              <div style={{ fontWeight:700, marginBottom:6, color:correct?"#86efac":"#fca5a5", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
+              <p style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation||"No explanation provided."}</p>
+            </div>}
+            {answered && <button onClick={next} style={{ ...S.btn(color), width:"100%", padding:13 }}>
+              {cur<sectionQuestions.length-1?"Next Question →":"🏁 Done — Back to Sections"}
+            </button>}
+          </div>
+        </div>
+      );
+    }
+  }
+
+  return null;
 }
+
 function StudyScreen({ questions, onFinish, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -1250,15 +1437,16 @@ function StudyScreen({ questions, onFinish, onHome }) {
   const col = SC[q.section] || { accent:"#10b981", bg:"#1e4a3a" };
   const diffCol = { "سهل":"#22c55e", "متوسط":"#f59e0b", "صعب":"#ef4444" };
   const next = () => { setShowExp(false); if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
+  const prev = () => { setShowExp(false); if (cur > 0) setCur(p=>p-1); };
 
   return (
     <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
-      <div style={{ background:col.bg, borderBottom:`1px solid #10b98144`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+      <div style={{ background:col.bg||"#1e4a3a", borderBottom:"1px solid #10b98144", padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <button onClick={onHome} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
-          <span style={{ color:"#94a3b8", fontSize:13 }}>📚 Study · Q {cur+1}/{questions.length}</span>
+          {cur > 0 && <button onClick={prev} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>← Back</button>}
         </div>
-        <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>Study Mode</span>
+        <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📚 Study · Q {cur+1}/{questions.length}</span>
         <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
       </div>
       <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:"#10b981", transition:"width 0.3s" }} /></div>
