@@ -10,6 +10,8 @@ const DB = {
   saveResults: (r) => localStorage.setItem("sple_results", JSON.stringify(r)),
   getQuestions: () => { const s = localStorage.getItem("sple_questions"); return s ? JSON.parse(s) : DEFAULT_QUESTIONS; },
   saveQuestions: (q) => localStorage.setItem("sple_questions", JSON.stringify(q)),
+  getExamSettings: () => JSON.parse(localStorage.getItem("sple_exam_settings") || "null") || { totalQ: 100, timeMins: 150, diffPct: { "سهل": 30, "متوسط": 40, "صعب": 30 } },
+  saveExamSettings: (s) => localStorage.setItem("sple_exam_settings", JSON.stringify(s)),
 };
 
 const ADMIN = { email: "admin123", password: "123456" };
@@ -35,6 +37,36 @@ const BLUEPRINT = {
 const SECTIONS = Object.keys(BLUEPRINT);
 const DIFFICULTIES = ["سهل","متوسط","صعب"];
 const SC = { "Basic Biomedical Sciences":{accent:"#3b82f6",bg:"#1e3a5f"}, "Pharmaceutical Sciences":{accent:"#10b981",bg:"#1e4a3a"}, "Social/Behavioral/Administrative Sciences":{accent:"#8b5cf6",bg:"#4a1e5f"}, "Clinical Sciences":{accent:"#ef4444",bg:"#5f1e1e"} };
+
+// Build a SCHS-blueprint-aligned exam with difficulty distribution
+function buildExam(allQuestions, settings) {
+  const { totalQ, diffPct } = settings;
+  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+  const result = [];
+
+  // For each section, pick questions proportionally
+  SECTIONS.forEach(sec => {
+    const bp = BLUEPRINT[sec];
+    const secCount = Math.round(totalQ * bp.pct / 100);
+    const pool = allQuestions.filter(q => q.section === sec);
+
+    // Pick by difficulty distribution
+    DIFFICULTIES.forEach(diff => {
+      const need = Math.round(secCount * (diffPct[diff] || 33) / 100);
+      const diffPool = shuffle(pool.filter(q => q.difficulty === diff));
+      result.push(...diffPool.slice(0, need));
+    });
+  });
+
+  // Fill up to totalQ if rounding left gaps
+  const chosen = shuffle(result).slice(0, totalQ);
+  if (chosen.length < totalQ) {
+    const usedIds = new Set(chosen.map(q => q.id));
+    const remaining = shuffle(allQuestions.filter(q => !usedIds.has(q.id)));
+    chosen.push(...remaining.slice(0, totalQ - chosen.length));
+  }
+  return shuffle(chosen);
+}
 
 const S = {
   page: { minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", direction:"ltr" },
@@ -185,16 +217,53 @@ function ExcelImport({ onImport }) {
       const wb = XLSX.read(data, { type:"array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval:"" });
-      const mapped = rows.filter(r => r.question && r.option_a).map((r, i) => ({
-        id: "xl_" + Date.now() + "_" + i,
-        section: r.section || "Pharmaceutical Sciences",
-        category: r.category || "General",
-        difficulty: r.difficulty || "متوسط",
-        question: String(r.question),
-        options: [String(r.option_a), String(r.option_b), String(r.option_c), String(r.option_d)],
-        answer: parseInt(r.correct_answer) || 0,
-        explanation: String(r.explanation || ""),
-      }));
+
+      const sectionMap = {
+        "Basic Biomedical Sciences": "Basic Biomedical Sciences",
+        "Pharmaceutical Sciences": "Pharmaceutical Sciences",
+        "Social-Behavioral-Administrative": "Social/Behavioral/Administrative Sciences",
+        "Clinical Sciences": "Clinical Sciences",
+      };
+      const diffMap = { "easy":"سهل", "medium":"متوسط", "hard":"صعب" };
+      const answerMap = { "A":0, "B":1, "C":2, "D":3 };
+
+      const mapped = rows.filter(r => r.Question && (r.A || r.option_a)).map((r, i) => {
+        // Support both ORION format (A,B,C,D,Correct,Specialty) and standard format
+        const isOrion = r.A !== undefined;
+        const question = String(r.Question || r.question || "");
+        const options = isOrion
+          ? [String(r.A), String(r.B), String(r.C), String(r.D)]
+          : [String(r.option_a), String(r.option_b), String(r.option_c), String(r.option_d)];
+        const answer = isOrion
+          ? (answerMap[String(r.Correct).trim().toUpperCase()] ?? 0)
+          : (parseInt(r.correct_answer) || 0);
+
+        // Parse section from Specialty field (e.g. "Clinical Sciences [easy]")
+        let section = "Pharmaceutical Sciences";
+        let difficulty = "متوسط";
+        if (isOrion && r.Specialty) {
+          const sp = String(r.Specialty);
+          for (const [key, val] of Object.entries(sectionMap)) {
+            if (sp.startsWith(key)) { section = val; break; }
+          }
+          difficulty = diffMap[String(r.Difficulty || "medium").toLowerCase()] || "متوسط";
+        } else {
+          section = r.section || "Pharmaceutical Sciences";
+          difficulty = diffMap[String(r.difficulty||"medium").toLowerCase()] || r.difficulty || "متوسط";
+        }
+
+        return {
+          id: "xl_" + Date.now() + "_" + i,
+          section,
+          category: r.Specialty ? String(r.Specialty).split(" [")[0] : (r.category || "General"),
+          difficulty,
+          question,
+          options,
+          answer,
+          explanation: String(r.Explanation || r.explanation || ""),
+        };
+      });
+
       if (mapped.length === 0) { setErr("No valid questions found. Check column names match the template."); setImporting(false); return; }
       setPreview(mapped);
     } catch(e) { setErr("Error: " + e.message); }
@@ -415,6 +484,109 @@ function AdminReports({ users, results }) {
   );
 }
 
+// ===================== ADMIN EXAM SETTINGS =====================
+function AdminExamSettings() {
+  const [settings, setSettings] = useState(DB.getExamSettings());
+  const [saved, setSaved] = useState(false);
+  const { totalQ, timeMins, diffPct } = settings;
+  const questions = DB.getQuestions();
+
+  const update = (key, val) => setSettings(p => ({ ...p, [key]: val }));
+  const updateDiff = (diff, val) => {
+    const v = Math.max(0, Math.min(100, Number(val)));
+    setSettings(p => ({ ...p, diffPct: { ...p.diffPct, [diff]: v } }));
+  };
+  const save = () => { DB.saveExamSettings(settings); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+
+  const diffTotal = Object.values(diffPct).reduce((a, b) => a + b, 0);
+  const diffCol = { "سهل": "#22c55e", "متوسط": "#f59e0b", "صعب": "#ef4444" };
+
+  // Preview distribution
+  const preview = SECTIONS.map(sec => {
+    const bp = BLUEPRINT[sec];
+    const secCount = Math.round(totalQ * bp.pct / 100);
+    const available = questions.filter(q => q.section === sec).length;
+    return { sec, secCount, available, bp };
+  });
+
+  return (
+    <div>
+      <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>⚙️ Exam Settings</h1>
+      <p style={{ color:"#64748b", marginBottom:20 }}>Configure exam parameters for all students</p>
+
+      {/* Main settings */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:20 }}>
+        <div style={{ ...S.card }}>
+          <div style={{ fontWeight:700, marginBottom:14, fontSize:15 }}>📝 Exam Size</div>
+          <label style={S.label}>Number of Questions: <span style={{ color:"#3b82f6", fontWeight:800 }}>{totalQ}</span></label>
+          <input type="range" min={10} max={200} step={5} value={totalQ} onChange={e => update("totalQ", Number(e.target.value))} style={{ width:"100%", accentColor:"#3b82f6", margin:"10px 0 6px" }} />
+          <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10</span><span>100 (SCHS)</span><span>200</span></div>
+        </div>
+
+        <div style={{ ...S.card }}>
+          <div style={{ fontWeight:700, marginBottom:14, fontSize:15 }}>⏱️ Time Limit</div>
+          <label style={S.label}>Duration: <span style={{ color:"#8b5cf6", fontWeight:800 }}>{timeMins} min ({Math.floor(timeMins/60)}h {timeMins%60}m)</span></label>
+          <input type="range" min={10} max={300} step={5} value={timeMins} onChange={e => update("timeMins", Number(e.target.value))} style={{ width:"100%", accentColor:"#8b5cf6", margin:"10px 0 6px" }} />
+          <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10m</span><span>150m (SCHS)</span><span>300m</span></div>
+        </div>
+      </div>
+
+      {/* Difficulty distribution */}
+      <div style={{ ...S.card, marginBottom:20 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+          <div style={{ fontWeight:700, fontSize:15 }}>📊 Difficulty Distribution</div>
+          <span style={{ fontSize:12, color: diffTotal === 100 ? "#22c55e" : "#ef4444", fontWeight:700 }}>Total: {diffTotal}% {diffTotal !== 100 ? "⚠️ must = 100%" : "✅"}</span>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+          {DIFFICULTIES.map(diff => (
+            <div key={diff} style={{ background: diffCol[diff]+"11", border:`1px solid ${diffCol[diff]}33`, borderRadius:12, padding:14 }}>
+              <div style={{ color: diffCol[diff], fontWeight:800, fontSize:14, marginBottom:8 }}>{diff === "سهل" ? "🟢 سهل" : diff === "متوسط" ? "🟡 متوسط" : "🔴 صعب"}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <input type="number" min={0} max={100} value={diffPct[diff]} onChange={e => updateDiff(diff, e.target.value)} style={{ ...S.input, width:70, textAlign:"center", padding:"8px", fontSize:18, fontWeight:800, color: diffCol[diff] }} />
+                <span style={{ color:"#64748b" }}>%</span>
+              </div>
+              <div style={{ marginTop:8, height:4, background:"rgba(255,255,255,0.08)", borderRadius:2 }}>
+                <div style={{ width:`${diffPct[diff]}%`, height:"100%", background: diffCol[diff], borderRadius:2, transition:"width 0.3s" }} />
+              </div>
+              <div style={{ color:"#475569", fontSize:11, marginTop:6 }}>{Math.round(totalQ * diffPct[diff] / 100)} questions</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Section preview */}
+      <div style={{ ...S.card, marginBottom:20 }}>
+        <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>🎯 Section Distribution Preview (SCHS Blueprint)</div>
+        {preview.map(({ sec, secCount, available, bp }) => {
+          const short = sec === "Social/Behavioral/Administrative Sciences" ? "Social/Admin" : sec.split(" ")[0] + " " + (sec.split(" ")[1] || "");
+          const ok = available >= secCount;
+          return (
+            <div key={sec} style={{ marginBottom:12 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:4 }}>
+                <span style={{ color:"#cbd5e1" }}>{short}</span>
+                <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                  <span style={{ color: ok ? bp.color : "#ef4444", fontWeight:700 }}>{secCount} needed</span>
+                  <span style={{ color: ok ? "#64748b" : "#ef4444" }}>{available} available {!ok && "⚠️"}</span>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:3 }}>
+                <div style={{ flex: bp.pct, height:8, background: bp.color, borderRadius:4, opacity: ok ? 1 : 0.4 }} />
+                <div style={{ flex: 100 - bp.pct, height:8, background:"rgba(255,255,255,0.06)", borderRadius:4 }} />
+              </div>
+              <div style={{ color:"#475569", fontSize:11, marginTop:2 }}>{bp.pct}% of exam</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button onClick={save} disabled={diffTotal !== 100} style={{ ...S.btn("#8b5cf6"), padding:"13px 28px", fontSize:15, opacity: diffTotal !== 100 ? 0.5 : 1 }}>
+        {saved ? "✅ Saved!" : "💾 Save Settings"}
+      </button>
+      {diffTotal !== 100 && <p style={{ color:"#ef4444", fontSize:12, marginTop:8 }}>⚠️ Difficulty percentages must add up to exactly 100%</p>}
+    </div>
+  );
+}
+
 // ===================== ADMIN DASHBOARD =====================
 function AdminDashboard({ user, onLogout }) {
   const [tab, setTab] = useState("overview");
@@ -423,7 +595,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
 
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
@@ -461,6 +633,7 @@ function AdminDashboard({ user, onLogout }) {
         {tab==="questions" && <AdminQuestions questions={questions} onChange={saveQ} />}
         {tab==="students" && <AdminStudents users={users} onChange={saveU} />}
         {tab==="reports" && <AdminReports users={users} results={results} />}
+        {tab==="settings" && <AdminExamSettings />}
       </div>
     </div>
   );
@@ -473,8 +646,12 @@ function StudentDashboard({ user, onLogout }) {
   const [examA, setExamA] = useState({});
   const [myResults, setMyResults] = useState(DB.getResults().filter(r=>r.userId===user.id));
   const questions = DB.getQuestions();
-  const shuffle = arr=>[...arr].sort(()=>Math.random()-0.5);
-  const startExam = n=>{ setExamQ(shuffle(questions).slice(0,Math.min(n,questions.length))); setScreen("exam"); };
+  const settings = DB.getExamSettings();
+
+  const startExam = () => {
+    const q = buildExam(questions, settings);
+    setExamQ(q); setScreen("exam");
+  };
   const finishExam = answers=>{
     const correct=examQ.filter(q=>answers[q.id]===q.answer).length;
     const score=Math.round((correct/examQ.length)*100);
@@ -482,7 +659,7 @@ function StudentDashboard({ user, onLogout }) {
     const all=[...DB.getResults(),result]; DB.saveResults(all);
     setMyResults(all.filter(r=>r.userId===user.id)); setExamA(answers); setScreen("results");
   };
-  if(screen==="exam") return <ExamScreen questions={examQ} onFinish={finishExam} />;
+  if(screen==="exam") return <ExamScreen questions={examQ} onFinish={finishExam} timeMins={settings.timeMins} />;
   if(screen==="results") return <ResultsScreen questions={examQ} answers={examA} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
   const avg=myResults.length?Math.round(myResults.reduce((a,r)=>a+r.score,0)/myResults.length):0;
   const best=myResults.length?Math.max(...myResults.map(r=>r.score)):0;
@@ -502,13 +679,25 @@ function StudentDashboard({ user, onLogout }) {
           ))}
         </div>
         <div style={{ ...S.card, marginBottom:20, border:"1px solid rgba(59,130,246,0.3)" }}>
-          <div style={{ fontWeight:700, marginBottom:4 }}>Start New Exam</div>
-          <p style={{ color:"#64748b", fontSize:13, marginBottom:16 }}>{questions.length} questions available · All SPLE content areas</p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-            {[10,20,questions.length].map(n=>(
-              <button key={n} onClick={()=>startExam(n)} style={{ ...S.btn("#3b82f6"), padding:13 }}>{n>=questions.length?`All (${questions.length})`:`${n} Questions`}</button>
+          <div style={{ fontWeight:700, marginBottom:4, fontSize:16 }}>🎯 Start New Exam</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:14 }}>
+            {[
+              ["📝", `${settings.totalQ} Questions`, "#3b82f6"],
+              ["⏱️", `${settings.timeMins} Minutes`, "#8b5cf6"],
+              ["🏦", `${questions.length} Available`, "#10b981"],
+            ].map(([icon, label, color]) => (
+              <div key={label} style={{ background: color+"11", border:`1px solid ${color}33`, borderRadius:10, padding:"10px", textAlign:"center" }}>
+                <div style={{ fontSize:18 }}>{icon}</div>
+                <div style={{ color, fontWeight:700, fontSize:13, marginTop:4 }}>{label}</div>
+              </div>
             ))}
           </div>
+          <div style={{ marginBottom:12, fontSize:12, color:"#64748b" }}>
+            Distribution: {SECTIONS.map(s => `${BLUEPRINT[s].pct}% ${s.split(" ")[0]}`).join(" · ")}
+          </div>
+          <button onClick={startExam} style={{ ...S.btn("#3b82f6"), width:"100%", padding:14, fontSize:15 }}>
+            🚀 Start Exam
+          </button>
         </div>
         <div style={S.card}>
           <div style={{ fontWeight:700, marginBottom:14 }}>Exam History</div>
@@ -528,10 +717,29 @@ function StudentDashboard({ user, onLogout }) {
   );
 }
 
-function ExamScreen({ questions, onFinish }) {
+function ExamScreen({ questions, onFinish, timeMins }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showExp, setShowExp] = useState(false);
+  const [secsLeft, setSecsLeft] = useState((timeMins || 150) * 60);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setSecsLeft(s => {
+        if (s <= 1) { clearInterval(t); onFinish(answers); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const h = Math.floor(secsLeft / 3600);
+  const m = Math.floor((secsLeft % 3600) / 60);
+  const s = secsLeft % 60;
+  const timeStr = h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
+  const timePct = secsLeft / ((timeMins || 150) * 60);
+  const timerColor = timePct > 0.25 ? "#22c55e" : timePct > 0.1 ? "#f59e0b" : "#ef4444";
+
   const q=questions[cur]; const answered=answers[q.id]!==undefined; const correct=answers[q.id]===q.answer;
   const col=SC[q.section]||{accent:"#3b82f6",bg:"#1e3a5f"};
   const diffCol={"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
@@ -540,9 +748,18 @@ function ExamScreen({ questions, onFinish }) {
     <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
       <div style={{ background:col.bg, borderBottom:`1px solid ${col.accent}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <span style={{ color:"#94a3b8", fontSize:13 }}>Q {cur+1}/{questions.length}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(0,0,0,0.3)", borderRadius:8, padding:"5px 12px" }}>
+          <span style={{ fontSize:14 }}>⏱️</span>
+          <span style={{ color:timerColor, fontWeight:800, fontSize:15, fontFamily:"monospace" }}>{timeStr}</span>
+        </div>
         <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
       </div>
-      <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} /></div>
+      <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}>
+        <div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} />
+      </div>
+      <div style={{ height:3, background:"rgba(255,255,255,0.05)" }}>
+        <div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} />
+      </div>
       <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
         <div style={{ color:col.accent, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
         <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
