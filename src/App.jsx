@@ -1437,7 +1437,6 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
         );
       }
     }
-  }
 
   return null;
 }
