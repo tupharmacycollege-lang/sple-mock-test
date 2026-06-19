@@ -10,7 +10,9 @@ const DB = {
   saveResults: (r) => localStorage.setItem("sple_results", JSON.stringify(r)),
   getQuestions: () => { const s = localStorage.getItem("sple_questions"); return s ? JSON.parse(s) : DEFAULT_QUESTIONS; },
   saveQuestions: (q) => localStorage.setItem("sple_questions", JSON.stringify(q)),
-  getExamSettings: () => JSON.parse(localStorage.getItem("sple_exam_settings") || "null") || { totalQ: 100, timeMins: 150, diffPct: { "سهل": 30, "متوسط": 40, "صعب": 30 } },
+  getStudySettings: () => JSON.parse(localStorage.getItem("sple_study_settings") || "null") || { totalQ: 50, diffPct: { "سهل": 33, "متوسط": 34, "صعب": 33 } },
+  saveStudySettings: (s) => localStorage.setItem("sple_study_settings", JSON.stringify(s)),
+  getExamSettings: () => JSON.parse(localStorage.getItem("sple_exam_settings") || "null") || { totalQ: 100, timeMins: 120, diffPct: { "سهل": 30, "متوسط": 40, "صعب": 30 } },
   saveExamSettings: (s) => localStorage.setItem("sple_exam_settings", JSON.stringify(s)),
 };
 
@@ -485,104 +487,92 @@ function AdminReports({ users, results }) {
 }
 
 // ===================== ADMIN EXAM SETTINGS =====================
-function AdminExamSettings() {
-  const [settings, setSettings] = useState(DB.getExamSettings());
+function SettingsPanel({ title, icon, accentColor, settings, onSave, showTime }) {
+  const [s, setS] = useState(settings);
   const [saved, setSaved] = useState(false);
-  const { totalQ, timeMins, diffPct } = settings;
   const questions = DB.getQuestions();
-
-  const update = (key, val) => setSettings(p => ({ ...p, [key]: val }));
-  const updateDiff = (diff, val) => {
-    const v = Math.max(0, Math.min(100, Number(val)));
-    setSettings(p => ({ ...p, diffPct: { ...p.diffPct, [diff]: v } }));
-  };
-  const save = () => { DB.saveExamSettings(settings); setSaved(true); setTimeout(() => setSaved(false), 2000); };
-
-  const diffTotal = Object.values(diffPct).reduce((a, b) => a + b, 0);
   const diffCol = { "سهل": "#22c55e", "متوسط": "#f59e0b", "صعب": "#ef4444" };
-
-  // Preview distribution
-  const preview = SECTIONS.map(sec => {
-    const bp = BLUEPRINT[sec];
-    const secCount = Math.round(totalQ * bp.pct / 100);
-    const available = questions.filter(q => q.section === sec).length;
-    return { sec, secCount, available, bp };
-  });
+  const diffTotal = Object.values(s.diffPct).reduce((a, b) => a + b, 0);
+  const update = (key, val) => setS(p => ({ ...p, [key]: val }));
+  const updateDiff = (diff, val) => { const v = Math.max(0, Math.min(100, Number(val))); setS(p => ({ ...p, diffPct: { ...p.diffPct, [diff]: v } })); };
+  const save = () => { onSave(s); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const preview = SECTIONS.map(sec => { const bp = BLUEPRINT[sec]; const secCount = Math.round(s.totalQ * bp.pct / 100); const available = questions.filter(q => q.section === sec).length; return { sec, secCount, available, bp }; });
 
   return (
-    <div>
-      <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>⚙️ Exam Settings</h1>
-      <p style={{ color:"#64748b", marginBottom:20 }}>Configure exam parameters for all students</p>
-
-      {/* Main settings */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:20 }}>
-        <div style={{ ...S.card }}>
-          <div style={{ fontWeight:700, marginBottom:14, fontSize:15 }}>📝 Exam Size</div>
-          <label style={S.label}>Number of Questions: <span style={{ color:"#3b82f6", fontWeight:800 }}>{totalQ}</span></label>
-          <input type="range" min={10} max={200} step={5} value={totalQ} onChange={e => update("totalQ", Number(e.target.value))} style={{ width:"100%", accentColor:"#3b82f6", margin:"10px 0 6px" }} />
-          <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10</span><span>100 (SCHS)</span><span>200</span></div>
+    <div style={{ ...S.card, border:`1px solid ${accentColor}33`, marginBottom:24 }}>
+      <div style={{ fontWeight:800, fontSize:17, marginBottom:16, color: accentColor }}>{icon} {title}</div>
+      <div style={{ display:"grid", gridTemplateColumns: showTime ? "1fr 1fr" : "1fr", gap:14, marginBottom:16 }}>
+        <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:12, padding:14 }}>
+          <label style={S.label}>Number of Questions: <span style={{ color:accentColor, fontWeight:800 }}>{s.totalQ}</span></label>
+          <input type="range" min={10} max={200} step={5} value={s.totalQ} onChange={e => update("totalQ", Number(e.target.value))} style={{ width:"100%", accentColor, margin:"8px 0 4px" }} />
+          <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10</span><span>100</span><span>200</span></div>
         </div>
-
-        <div style={{ ...S.card }}>
-          <div style={{ fontWeight:700, marginBottom:14, fontSize:15 }}>⏱️ Time Limit</div>
-          <label style={S.label}>Duration: <span style={{ color:"#8b5cf6", fontWeight:800 }}>{timeMins} min ({Math.floor(timeMins/60)}h {timeMins%60}m)</span></label>
-          <input type="range" min={10} max={300} step={5} value={timeMins} onChange={e => update("timeMins", Number(e.target.value))} style={{ width:"100%", accentColor:"#8b5cf6", margin:"10px 0 6px" }} />
-          <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10m</span><span>150m (SCHS)</span><span>300m</span></div>
-        </div>
+        {showTime && (
+          <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:12, padding:14 }}>
+            <label style={S.label}>Time: <span style={{ color:accentColor, fontWeight:800 }}>{s.timeMins} min ({Math.floor(s.timeMins/60)}h {s.timeMins%60}m)</span></label>
+            <input type="range" min={10} max={300} step={5} value={s.timeMins} onChange={e => update("timeMins", Number(e.target.value))} style={{ width:"100%", accentColor, margin:"8px 0 4px" }} />
+            <div style={{ display:"flex", justifyContent:"space-between", color:"#475569", fontSize:11 }}><span>10m</span><span>120m</span><span>300m</span></div>
+          </div>
+        )}
       </div>
 
-      {/* Difficulty distribution */}
-      <div style={{ ...S.card, marginBottom:20 }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-          <div style={{ fontWeight:700, fontSize:15 }}>📊 Difficulty Distribution</div>
-          <span style={{ fontSize:12, color: diffTotal === 100 ? "#22c55e" : "#ef4444", fontWeight:700 }}>Total: {diffTotal}% {diffTotal !== 100 ? "⚠️ must = 100%" : "✅"}</span>
+      <div style={{ marginBottom:14 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
+          <span style={{ ...S.label, margin:0 }}>Difficulty Distribution</span>
+          <span style={{ fontSize:11, color: diffTotal===100?"#22c55e":"#ef4444", fontWeight:700 }}>Total: {diffTotal}% {diffTotal!==100?"⚠️":"✅"}</span>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
           {DIFFICULTIES.map(diff => (
-            <div key={diff} style={{ background: diffCol[diff]+"11", border:`1px solid ${diffCol[diff]}33`, borderRadius:12, padding:14 }}>
-              <div style={{ color: diffCol[diff], fontWeight:800, fontSize:14, marginBottom:8 }}>{diff === "سهل" ? "🟢 سهل" : diff === "متوسط" ? "🟡 متوسط" : "🔴 صعب"}</div>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <input type="number" min={0} max={100} value={diffPct[diff]} onChange={e => updateDiff(diff, e.target.value)} style={{ ...S.input, width:70, textAlign:"center", padding:"8px", fontSize:18, fontWeight:800, color: diffCol[diff] }} />
-                <span style={{ color:"#64748b" }}>%</span>
-              </div>
-              <div style={{ marginTop:8, height:4, background:"rgba(255,255,255,0.08)", borderRadius:2 }}>
-                <div style={{ width:`${diffPct[diff]}%`, height:"100%", background: diffCol[diff], borderRadius:2, transition:"width 0.3s" }} />
-              </div>
-              <div style={{ color:"#475569", fontSize:11, marginTop:6 }}>{Math.round(totalQ * diffPct[diff] / 100)} questions</div>
+            <div key={diff} style={{ background:diffCol[diff]+"11", border:`1px solid ${diffCol[diff]}33`, borderRadius:10, padding:12, textAlign:"center" }}>
+              <div style={{ color:diffCol[diff], fontWeight:700, fontSize:12, marginBottom:6 }}>{diff==="سهل"?"🟢":"diff"==="متوسط"?"🟡":"🔴"} {diff}</div>
+              <input type="number" min={0} max={100} value={s.diffPct[diff]} onChange={e=>updateDiff(diff,e.target.value)} style={{ ...S.input, width:"100%", textAlign:"center", padding:"6px", fontSize:16, fontWeight:800, color:diffCol[diff] }} />
+              <div style={{ color:"#64748b", fontSize:10, marginTop:4 }}>{Math.round(s.totalQ*s.diffPct[diff]/100)} q</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Section preview */}
-      <div style={{ ...S.card, marginBottom:20 }}>
-        <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>🎯 Section Distribution Preview (SCHS Blueprint)</div>
-        {preview.map(({ sec, secCount, available, bp }) => {
-          const short = sec === "Social/Behavioral/Administrative Sciences" ? "Social/Admin" : sec.split(" ")[0] + " " + (sec.split(" ")[1] || "");
+      <div style={{ marginBottom:14 }}>
+        <div style={{ color:"#64748b", fontSize:12, fontWeight:600, marginBottom:8 }}>SECTION PREVIEW (SCHS Blueprint)</div>
+        {preview.map(({sec,secCount,available,bp}) => {
+          const short = sec==="Social/Behavioral/Administrative Sciences"?"Social/Admin":sec.split(" ")[0];
           const ok = available >= secCount;
-          return (
-            <div key={sec} style={{ marginBottom:12 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:4 }}>
-                <span style={{ color:"#cbd5e1" }}>{short}</span>
-                <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-                  <span style={{ color: ok ? bp.color : "#ef4444", fontWeight:700 }}>{secCount} needed</span>
-                  <span style={{ color: ok ? "#64748b" : "#ef4444" }}>{available} available {!ok && "⚠️"}</span>
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:3 }}>
-                <div style={{ flex: bp.pct, height:8, background: bp.color, borderRadius:4, opacity: ok ? 1 : 0.4 }} />
-                <div style={{ flex: 100 - bp.pct, height:8, background:"rgba(255,255,255,0.06)", borderRadius:4 }} />
-              </div>
-              <div style={{ color:"#475569", fontSize:11, marginTop:2 }}>{bp.pct}% of exam</div>
+          return <div key={sec} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+            <span style={{ color:"#94a3b8", fontSize:11, width:80, flexShrink:0 }}>{short}</span>
+            <div style={{ flex:1, height:6, background:"rgba(255,255,255,0.06)", borderRadius:3 }}>
+              <div style={{ width:`${bp.pct}%`, height:"100%", background:bp.color, borderRadius:3 }} />
             </div>
-          );
+            <span style={{ color: ok?bp.color:"#ef4444", fontSize:11, fontWeight:700, width:70, textAlign:"right" }}>{secCount} {!ok&&"⚠️"}</span>
+          </div>;
         })}
       </div>
 
-      <button onClick={save} disabled={diffTotal !== 100} style={{ ...S.btn("#8b5cf6"), padding:"13px 28px", fontSize:15, opacity: diffTotal !== 100 ? 0.5 : 1 }}>
-        {saved ? "✅ Saved!" : "💾 Save Settings"}
+      <button onClick={save} disabled={diffTotal!==100} style={{ ...S.btn(accentColor), opacity:diffTotal!==100?0.5:1 }}>
+        {saved?"✅ Saved!":"💾 Save Settings"}
       </button>
-      {diffTotal !== 100 && <p style={{ color:"#ef4444", fontSize:12, marginTop:8 }}>⚠️ Difficulty percentages must add up to exactly 100%</p>}
+    </div>
+  );
+}
+
+function AdminExamSettings() {
+  return (
+    <div>
+      <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>⚙️ Exam Settings</h1>
+      <p style={{ color:"#64748b", marginBottom:24 }}>Configure both study session and exam parameters</p>
+      <SettingsPanel
+        title="Study Session — دورة المراجعة"
+        icon="📚" accentColor="#10b981"
+        settings={DB.getStudySettings()}
+        onSave={DB.saveStudySettings}
+        showTime={false}
+      />
+      <SettingsPanel
+        title="Exam — الاختبار الرسمي"
+        icon="🎯" accentColor="#ef4444"
+        settings={DB.getExamSettings()}
+        onSave={DB.saveExamSettings}
+        showTime={true}
+      />
     </div>
   );
 }
@@ -641,30 +631,46 @@ function AdminDashboard({ user, onLogout }) {
 
 // ===================== STUDENT =====================
 function StudentDashboard({ user, onLogout }) {
-  const [screen, setScreen] = useState("home");
+  const [screen, setScreen] = useState("home"); // home | study | exam | results
   const [examQ, setExamQ] = useState([]);
   const [examA, setExamA] = useState({});
+  const [mode, setMode] = useState("exam"); // "study" | "exam"
   const [myResults, setMyResults] = useState(DB.getResults().filter(r=>r.userId===user.id));
   const questions = DB.getQuestions();
-  const settings = DB.getExamSettings();
+  const studySettings = DB.getStudySettings();
+  const examSettings = DB.getExamSettings();
 
-  const startExam = () => {
+  const startSession = (sessionMode) => {
+    const settings = sessionMode === "study" ? studySettings : examSettings;
     const q = buildExam(questions, settings);
-    setExamQ(q); setScreen("exam");
+    setMode(sessionMode);
+    setExamQ(q);
+    setScreen(sessionMode);
   };
-  const finishExam = answers=>{
-    const correct=examQ.filter(q=>answers[q.id]===q.answer).length;
-    const score=Math.round((correct/examQ.length)*100);
-    const result={userId:user.id,userName:user.name,date:new Date().toLocaleDateString(),score,correct,total:examQ.length};
-    const all=[...DB.getResults(),result]; DB.saveResults(all);
-    setMyResults(all.filter(r=>r.userId===user.id)); setExamA(answers); setScreen("results");
+
+  const finishSession = (answers) => {
+    const correct = examQ.filter(q => answers[q.id] === q.answer).length;
+    const score = Math.round((correct / examQ.length) * 100);
+    const result = { userId:user.id, userName:user.name, date:new Date().toLocaleDateString(), score, correct, total:examQ.length, mode };
+    const all = [...DB.getResults(), result];
+    DB.saveResults(all);
+    setMyResults(all.filter(r => r.userId === user.id));
+    setExamA(answers);
+    setScreen("results");
   };
-  if(screen==="exam") return <ExamScreen questions={examQ} onFinish={finishExam} timeMins={settings.timeMins} />;
-  if(screen==="results") return <ResultsScreen questions={examQ} answers={examA} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
-  const avg=myResults.length?Math.round(myResults.reduce((a,r)=>a+r.score,0)/myResults.length):0;
-  const best=myResults.length?Math.max(...myResults.map(r=>r.score)):0;
+
+  if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} />;
+  if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} />;
+  if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
+
+  const examResults = myResults.filter(r => r.mode === "exam" || !r.mode);
+  const studyResults = myResults.filter(r => r.mode === "study");
+  const avg = examResults.length ? Math.round(examResults.reduce((a,r)=>a+r.score,0)/examResults.length) : 0;
+  const best = examResults.length ? Math.max(...examResults.map(r=>r.score)) : 0;
+
   return (
     <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+      {/* Header */}
       <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.08)", padding:"12px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}><span style={{ fontSize:20 }}>💊</span><div><div style={{ fontWeight:800 }}>SPLE Platform</div><div style={{ color:"#64748b", fontSize:11 }}>Student Portal</div></div></div>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -672,38 +678,50 @@ function StudentDashboard({ user, onLogout }) {
           <button onClick={onLogout} style={{ ...S.ghost, padding:"7px 12px" }}>Logout</button>
         </div>
       </div>
-      <div style={{ maxWidth:680, margin:"0 auto", padding:24 }}>
+
+      <div style={{ maxWidth:720, margin:"0 auto", padding:24 }}>
+        {/* Stats */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:24 }}>
-          {[["📝",myResults.length,"Exams Taken","#3b82f6"],["📊",`${avg}%`,"Average Score","#10b981"],["🏆",`${best}%`,"Best Score","#f59e0b"]].map(([icon,val,label,color])=>(
+          {[["📝",examResults.length,"Exams Taken","#3b82f6"],["📊",`${avg}%`,"Avg Score","#10b981"],["🏆",`${best}%`,"Best Score","#f59e0b"]].map(([icon,val,label,color])=>(
             <div key={label} style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${color}33`, borderRadius:14, padding:18 }}><div style={{ fontSize:22 }}>{icon}</div><div style={{ fontSize:26, fontWeight:800, color, marginTop:6 }}>{val}</div><div style={{ color:"#64748b", fontSize:12 }}>{label}</div></div>
           ))}
         </div>
-        <div style={{ ...S.card, marginBottom:20, border:"1px solid rgba(59,130,246,0.3)" }}>
-          <div style={{ fontWeight:700, marginBottom:4, fontSize:16 }}>🎯 Start New Exam</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:14 }}>
-            {[
-              ["📝", `${settings.totalQ} Questions`, "#3b82f6"],
-              ["⏱️", `${settings.timeMins} Minutes`, "#8b5cf6"],
-              ["🏦", `${questions.length} Available`, "#10b981"],
-            ].map(([icon, label, color]) => (
-              <div key={label} style={{ background: color+"11", border:`1px solid ${color}33`, borderRadius:10, padding:"10px", textAlign:"center" }}>
-                <div style={{ fontSize:18 }}>{icon}</div>
-                <div style={{ color, fontWeight:700, fontSize:13, marginTop:4 }}>{label}</div>
-              </div>
-            ))}
+
+        {/* Two mode cards */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:24 }}>
+          {/* Study */}
+          <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.35)", background:"rgba(16,185,129,0.04)" }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📚</div>
+            <div style={{ fontWeight:800, fontSize:17, color:"#10b981", marginBottom:6 }}>Study Session</div>
+            <div style={{ color:"#64748b", fontSize:12, marginBottom:16, lineHeight:1.6 }}>تعلّم وراجع مع الإجابات الفورية والشرح لكل سؤال</div>
+            <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>⏱️ No Time Limit</span>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>✅ Instant Feedback</span>
+            </div>
+            <button onClick={()=>startSession("study")} style={{ ...S.btn("#10b981"), width:"100%", padding:12 }}>Start Study Session →</button>
           </div>
-          <div style={{ marginBottom:12, fontSize:12, color:"#64748b" }}>
-            Distribution: {SECTIONS.map(s => `${BLUEPRINT[s].pct}% ${s.split(" ")[0]}`).join(" · ")}
+
+          {/* Exam */}
+          <div style={{ ...S.card, border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.04)" }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>🎯</div>
+            <div style={{ fontWeight:800, fontSize:17, color:"#ef4444", marginBottom:6 }}>Official Exam</div>
+            <div style={{ color:"#64748b", fontSize:12, marginBottom:16, lineHeight:1.6 }}>اختبار محاكاة حقيقي بدون إجابات أثناء الاختبار</div>
+            <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>📝 {examSettings.totalQ} Questions</span>
+              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>⏱️ {examSettings.timeMins} min</span>
+              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>🔒 No Feedback</span>
+            </div>
+            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#ef4444"), width:"100%", padding:12 }}>Start Exam →</button>
           </div>
-          <button onClick={startExam} style={{ ...S.btn("#3b82f6"), width:"100%", padding:14, fontSize:15 }}>
-            🚀 Start Exam
-          </button>
         </div>
+
+        {/* History */}
         <div style={S.card}>
           <div style={{ fontWeight:700, marginBottom:14 }}>Exam History</div>
-          {myResults.length===0?<p style={{ color:"#475569", textAlign:"center", padding:"16px 0" }}>No exams yet.</p>:(
+          {examResults.length===0 ? <p style={{ color:"#475569", textAlign:"center", padding:"16px 0" }}>No exams yet.</p> : (
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {[...myResults].reverse().map((r,i)=>(
+              {[...examResults].reverse().slice(0,10).map((r,i)=>(
                 <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"10px 14px" }}>
                   <div><div style={{ fontWeight:700 }}>{r.correct}/{r.total} Correct</div><div style={{ color:"#64748b", fontSize:12 }}>{r.date}</div></div>
                   <div style={{ fontSize:22, fontWeight:800, color:r.score>=70?"#86efac":r.score>=60?"#fde68a":"#fca5a5" }}>{r.score}%</div>
@@ -717,11 +735,59 @@ function StudentDashboard({ user, onLogout }) {
   );
 }
 
-function ExamScreen({ questions, onFinish, timeMins }) {
+// ===================== STUDY SCREEN (with instant feedback) =====================
+function StudyScreen({ questions, onFinish }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showExp, setShowExp] = useState(false);
-  const [secsLeft, setSecsLeft] = useState((timeMins || 150) * 60);
+  const q = questions[cur];
+  const answered = answers[q.id] !== undefined;
+  const correct = answers[q.id] === q.answer;
+  const col = SC[q.section] || { accent:"#10b981", bg:"#1e4a3a" };
+  const diffCol = { "سهل":"#22c55e", "متوسط":"#f59e0b", "صعب":"#ef4444" };
+  const next = () => { setShowExp(false); if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
+  const answered_count = Object.keys(answers).length;
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+      <div style={{ background:col.bg, borderBottom:`1px solid #10b98144`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <span style={{ color:"#94a3b8", fontSize:13 }}>📚 Study · Q {cur+1}/{questions.length}</span>
+        <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>Study Mode</span>
+        <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
+      </div>
+      <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:"#10b981", transition:"width 0.3s" }} /></div>
+      <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
+        <div style={{ color:"#10b981", fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
+        <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.2)", marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
+        <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
+          {q.options.map((opt,i) => {
+            let bg="rgba(255,255,255,0.04)", border="1px solid rgba(255,255,255,0.1)", c="#e2e8f0";
+            if (answered) {
+              if (i === q.answer) { bg="rgba(34,197,94,0.12)"; border="1.5px solid #22c55e"; c="#86efac"; }
+              else if (i === answers[q.id]) { bg="rgba(239,68,68,0.12)"; border="1.5px solid #ef4444"; c="#fca5a5"; }
+            }
+            return <button key={i} onClick={()=>{ if(!answered){ setAnswers(p=>({...p,[q.id]:i})); setShowExp(true); }}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
+              <span style={{ width:26,height:26,borderRadius:7,background:"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
+              {opt}
+              {answered && i===q.answer && <span style={{ marginLeft:"auto" }}>✓</span>}
+              {answered && i===answers[q.id] && i!==q.answer && <span style={{ marginLeft:"auto" }}>✗</span>}
+            </button>;
+          })}
+        </div>
+        {showExp && <div style={{ background:correct?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1px solid ${correct?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
+          <div style={{ fontWeight:700, marginBottom:6, color:correct?"#86efac":"#fca5a5", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
+          <p style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation || "No explanation provided."}</p>
+        </div>}
+        {answered && <button onClick={next} style={{ ...S.btn("#10b981"), width:"100%", padding:13 }}>{cur<questions.length-1?"Next →":"🏁 Finish Study Session"}</button>}
+      </div>
+    </div>
+  );
+}
+
+function ExamScreen({ questions, onFinish, timeMins }) {
+  const [cur, setCur] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [secsLeft, setSecsLeft] = useState((timeMins || 120) * 60);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -737,56 +803,59 @@ function ExamScreen({ questions, onFinish, timeMins }) {
   const m = Math.floor((secsLeft % 3600) / 60);
   const s = secsLeft % 60;
   const timeStr = h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
-  const timePct = secsLeft / ((timeMins || 150) * 60);
+  const timePct = secsLeft / ((timeMins || 120) * 60);
   const timerColor = timePct > 0.25 ? "#22c55e" : timePct > 0.1 ? "#f59e0b" : "#ef4444";
 
-  const q=questions[cur]; const answered=answers[q.id]!==undefined; const correct=answers[q.id]===q.answer;
-  const col=SC[q.section]||{accent:"#3b82f6",bg:"#1e3a5f"};
-  const diffCol={"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
-  const next=()=>{ setShowExp(false); if(cur<questions.length-1) setCur(p=>p+1); else onFinish(answers); };
+  const q = questions[cur];
+  const answered = answers[q.id] !== undefined;
+  const col = SC[q.section] || { accent:"#3b82f6", bg:"#1e3a5f" };
+  const diffCol = { "سهل":"#22c55e", "متوسط":"#f59e0b", "صعب":"#ef4444" };
+  const next = () => { if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
+
   return (
     <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
       <div style={{ background:col.bg, borderBottom:`1px solid ${col.accent}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <span style={{ color:"#94a3b8", fontSize:13 }}>Q {cur+1}/{questions.length}</span>
+        <span style={{ color:"#94a3b8", fontSize:13 }}>🎯 Exam · Q {cur+1}/{questions.length}</span>
         <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(0,0,0,0.3)", borderRadius:8, padding:"5px 12px" }}>
           <span style={{ fontSize:14 }}>⏱️</span>
           <span style={{ color:timerColor, fontWeight:800, fontSize:15, fontFamily:"monospace" }}>{timeStr}</span>
         </div>
         <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
       </div>
-      <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}>
-        <div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} />
-      </div>
-      <div style={{ height:3, background:"rgba(255,255,255,0.05)" }}>
-        <div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} />
-      </div>
+      <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} /></div>
+      <div style={{ height:3, background:"rgba(255,255,255,0.05)" }}><div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} /></div>
       <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
         <div style={{ color:col.accent, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
         <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
         <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
-          {q.options.map((opt,i)=>{
-            let bg="rgba(255,255,255,0.04)",border="1px solid rgba(255,255,255,0.1)",c="#e2e8f0";
-            if(answered){ if(i===q.answer){bg="rgba(34,197,94,0.12)";border="1.5px solid #22c55e";c="#86efac";} else if(i===answers[q.id]){bg="rgba(239,68,68,0.12)";border="1.5px solid #ef4444";c="#fca5a5";} }
-            return <button key={i} onClick={()=>{ if(!answered){ setAnswers(p=>({...p,[q.id]:i})); setShowExp(true); } }} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c,fontSize:13,display:"flex",alignItems:"center",gap:10 }}><span style={{ width:26,height:26,borderRadius:7,background:"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#94a3b8" }}>{["A","B","C","D"][i]}</span>{opt}{answered&&i===q.answer&&<span style={{ marginLeft:"auto" }}>✓</span>}{answered&&i===answers[q.id]&&i!==q.answer&&<span style={{ marginLeft:"auto" }}>✗</span>}</button>;
+          {q.options.map((opt,i) => {
+            const selected = answers[q.id] === i;
+            return <button key={i} onClick={()=>setAnswers(p=>({...p,[q.id]:i}))} style={{ background:selected?"rgba(59,130,246,0.15)":"rgba(255,255,255,0.04)", border:selected?`1.5px solid ${col.accent}`:"1px solid rgba(255,255,255,0.1)", borderRadius:11, padding:"12px 16px", cursor:"pointer", textAlign:"left", color:selected?"#93c5fd":"#e2e8f0", fontSize:13, display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ width:26,height:26,borderRadius:7,background:selected?col.accent+"33":"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:selected?col.accent:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
+              {opt}
+              {selected && <span style={{ marginLeft:"auto", color:col.accent }}>●</span>}
+            </button>;
           })}
         </div>
-        {showExp && <div style={{ background:correct?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1px solid ${correct?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:12, padding:16, marginBottom:16 }}><div style={{ fontWeight:700, marginBottom:6, color:correct?"#86efac":"#fca5a5", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div><p style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation}</p></div>}
-        {answered && <button onClick={next} style={{ ...S.btn(col.accent), width:"100%", padding:13 }}>{cur<questions.length-1?"Next →":"🏁 Finish Exam"}</button>}
+        <button onClick={next} style={{ ...S.btn(col.accent), width:"100%", padding:13 }}>
+          {cur < questions.length-1 ? (answered ? "Next →" : "Skip →") : "🏁 Finish Exam"}
+        </button>
       </div>
     </div>
   );
 }
 
-function ResultsScreen({ questions, answers, onRetry, onHome, userName }) {
+function ResultsScreen({ questions, answers, onRetry, onHome, userName, mode }) {
   const correct=questions.filter(q=>answers[q.id]===q.answer).length;
   const score=Math.round((correct/questions.length)*100);
   const grade=score>=85?{label:"Excellent",color:"#22c55e",emoji:"🏆"}:score>=70?{label:"Good",color:"#3b82f6",emoji:"🎯"}:score>=60?{label:"Pass",color:"#f59e0b",emoji:"📈"}:{label:"Needs Review",color:"#ef4444",emoji:"📚"};
   const circ=2*Math.PI*52;
   const bySection=SECTIONS.reduce((acc,sec)=>{ const qs=questions.filter(q=>q.section===sec); if(!qs.length) return acc; const c=qs.filter(q=>answers[q.id]===q.answer).length; acc[sec]={total:qs.length,correct:c,pct:Math.round(c/qs.length*100)}; return acc; },{});
+  const isExam = mode === "exam" || !mode;
   return (
     <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", padding:24 }}>
       <div style={{ maxWidth:600, margin:"0 auto" }}>
-        <h2 style={{ textAlign:"center", fontSize:22, fontWeight:800, marginBottom:4 }}>Exam Complete!</h2>
+        <h2 style={{ textAlign:"center", fontSize:22, fontWeight:800, marginBottom:4 }}>{isExam ? "🎯 Exam Complete!" : "📚 Study Session Complete!"}</h2>
         {userName&&<p style={{ textAlign:"center", color:"#64748b", marginBottom:20 }}>Great effort, {userName}!</p>}
         <div style={{ display:"flex", justifyContent:"center", marginBottom:20 }}>
           <div style={{ ...S.card, textAlign:"center", minWidth:260 }}>
@@ -797,7 +866,7 @@ function ResultsScreen({ questions, answers, onRetry, onHome, userName }) {
               <text x="60" y="73" textAnchor="middle" fill="#64748b" fontSize="10">{grade.emoji} {grade.label}</text>
             </svg>
             <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
-              {[["✅",correct,"Correct"],["❌",questions.length-correct,"Wrong"]].map(([e,n,l])=><div key={l}><div style={{ fontSize:18, fontWeight:800 }}>{n}</div><div style={{ color:"#64748b", fontSize:12 }}>{e} {l}</div></div>)}
+              {[["✅",correct,"Correct"],["❌",questions.length-correct,"Wrong"],["⬜",questions.length-Object.keys(answers).length,"Skipped"]].map(([e,n,l])=><div key={l}><div style={{ fontSize:18, fontWeight:800 }}>{n}</div><div style={{ color:"#64748b", fontSize:12 }}>{e} {l}</div></div>)}
             </div>
           </div>
         </div>
@@ -816,7 +885,7 @@ function ResultsScreen({ questions, answers, onRetry, onHome, userName }) {
         )}
         <div style={{ display:"flex", gap:10 }}>
           <button onClick={onHome} style={{ flex:1, ...S.ghost, padding:13, fontSize:14 }}>🏠 Dashboard</button>
-          <button onClick={onRetry} style={{ flex:1, ...S.btn("#3b82f6"), padding:13 }}>🔄 New Exam</button>
+          <button onClick={onRetry} style={{ flex:1, ...S.btn(isExam?"#ef4444":"#10b981"), padding:13 }}>🔄 {isExam?"New Exam":"New Study Session"}</button>
         </div>
       </div>
     </div>
