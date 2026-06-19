@@ -1315,7 +1315,7 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
 
       const renderBlock = (block, i) => {
         if (block.type === "text") return (
-          <p key={i} style={{ color:T.ink2, fontSize:14.5, lineHeight:1.9, margin:"0 0 18px", fontFamily:"Georgia, serif" }}>{block.content}</p>
+          <p key={i} style={{ color:T.ink2, fontSize:14.5, lineHeight:1.9, margin:"0 0 18px", fontFamily:"Georgia, serif", direction:"ltr", textAlign:"left" }}>{block.content}</p>
         );
         if (block.type === "formula") return (
           <div key={i} style={{ background:color+"14", border:`1.5px solid ${color}44`, borderRadius:10, padding:"14px 18px", marginBottom:18 }}>
@@ -1337,9 +1337,9 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
           </div>
         );
         if (block.type === "table") return (
-          <div key={i} style={{ marginBottom:20, borderRadius:10, overflow:"hidden", border:`1.5px solid ${T.border}`, boxShadow:T.shadow }}>
+          <div key={i} style={{ marginBottom:20, borderRadius:10, overflow:"hidden", border:`1.5px solid ${T.border}`, boxShadow:T.shadow, direction:"ltr" }}>
             <div style={{ overflowX:"auto" }}>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13.5, fontFamily:"system-ui,sans-serif" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13.5, fontFamily:"system-ui,sans-serif", direction:"ltr" }}>
                 <thead>
                   <tr style={{ background:color+"18" }}>
                     {block.headers.map((h,j)=>(
@@ -1351,7 +1351,7 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
                   {block.rows.map((row,j)=>(
                     <tr key={j} style={{ borderBottom:`1px solid ${T.border}`, background:j%2===0?T.surface:T.bg }}>
                       {row.map((cell,k)=>(
-                        <td key={k} style={{ padding:"10px 15px", color:k===0?T.ink:T.ink2, fontWeight:k===0?600:400, lineHeight:1.6, fontSize:13 }}>{cell}</td>
+                        <td key={k} style={{ padding:"10px 15px", textAlign:"left", color:k===0?T.ink:T.ink2, fontWeight:k===0?600:400, lineHeight:1.6, fontSize:13 }}>{cell}</td>
                       ))}
                     </tr>
                   ))}
@@ -1376,7 +1376,7 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
           <div style={{ height:3, background:T.bg2 }}>
             <div style={{ width:`${((lessonIdx+1)/lessons.length)*100}%`, height:"100%", background:color, transition:"width 0.4s" }} />
           </div>
-          <div style={{ maxWidth:800, margin:"0 auto", padding:"24px 24px 40px" }}>
+          <div style={{ maxWidth:800, margin:"0 auto", padding:"24px 24px 40px", direction:"ltr" }}>
             {/* Lesson header like PDF */}
             <div style={{ borderBottom:`2px solid ${color}`, paddingBottom:12, marginBottom:24 }}>
               <div style={{ color:color, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:2, marginBottom:4 }}>{l.section}</div>
