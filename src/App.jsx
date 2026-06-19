@@ -8,8 +8,15 @@ const DB = {
   saveUsers: (u) => localStorage.setItem("sple_users", JSON.stringify(u)),
   getResults: () => JSON.parse(localStorage.getItem("sple_results") || "[]"),
   saveResults: (r) => localStorage.setItem("sple_results", JSON.stringify(r)),
+  // Shared bank (legacy + manual)
   getQuestions: () => { const s = localStorage.getItem("sple_questions"); return s ? JSON.parse(s) : DEFAULT_QUESTIONS; },
   saveQuestions: (q) => localStorage.setItem("sple_questions", JSON.stringify(q)),
+  // Study-only bank
+  getStudyQuestions: () => { const s = localStorage.getItem("sple_study_questions"); return s ? JSON.parse(s) : []; },
+  saveStudyQuestions: (q) => localStorage.setItem("sple_study_questions", JSON.stringify(q)),
+  // Exam-only bank
+  getExamQuestions: () => { const s = localStorage.getItem("sple_exam_questions"); return s ? JSON.parse(s) : []; },
+  saveExamQuestions: (q) => localStorage.setItem("sple_exam_questions", JSON.stringify(q)),
   getStudySettings: () => JSON.parse(localStorage.getItem("sple_study_settings") || "null") || { totalQ: 50, diffPct: { "سهل": 33, "متوسط": 34, "صعب": 33 } },
   saveStudySettings: (s) => localStorage.setItem("sple_study_settings", JSON.stringify(s)),
   getExamSettings: () => JSON.parse(localStorage.getItem("sple_exam_settings") || "null") || { totalQ: 100, timeMins: 120, diffPct: { "سهل": 30, "متوسط": 40, "صعب": 30 } },
@@ -203,107 +210,98 @@ function QuestionStats({ questions }) {
 
 const sectionColors2 = { "Basic Biomedical Sciences":{accent:"#3b82f6"}, "Pharmaceutical Sciences":{accent:"#10b981"}, "Social/Behavioral/Administrative Sciences":{accent:"#8b5cf6"}, "Clinical Sciences":{accent:"#ef4444"} };
 
-function ExcelImport({ onImport }) {
+function parseExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type:"array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval:"" });
+        const diffMap = { "easy":"سهل", "medium":"متوسط", "hard":"صعب" };
+        const answerMap = { "A":0, "B":1, "C":2, "D":3 };
+        const sectionMap = {
+          "Basic Biomedical Sciences":"Basic Biomedical Sciences",
+          "Pharmaceutical Sciences":"Pharmaceutical Sciences",
+          "Social-Behavioral-Administrative":"Social/Behavioral/Administrative Sciences",
+          "Social/Behavioral/Administrative Sciences":"Social/Behavioral/Administrative Sciences",
+          "Clinical Sciences":"Clinical Sciences",
+        };
+        const mapped = rows.filter(r => (r.question||r.Question) && (r.option_a||r.A)).map((r,i) => {
+          const isOrion = r.A !== undefined && r.option_a === undefined;
+          const question = String(r.question || r.Question || "");
+          const options = isOrion ? [String(r.A),String(r.B),String(r.C),String(r.D)] : [String(r.option_a),String(r.option_b),String(r.option_c),String(r.option_d)];
+          const answer = isOrion ? (answerMap[String(r.Correct||"A").trim().toUpperCase()]??0) : (parseInt(r.correct_answer)||0);
+          let section = "Pharmaceutical Sciences", difficulty = "متوسط";
+          if (isOrion && r.Specialty) {
+            const sp = String(r.Specialty);
+            for (const [k,v] of Object.entries(sectionMap)) { if(sp.startsWith(k)){section=v;break;} }
+            difficulty = diffMap[String(r.Difficulty||"medium").toLowerCase()]||"متوسط";
+          } else {
+            section = sectionMap[r.section]||r.section||"Pharmaceutical Sciences";
+            difficulty = diffMap[String(r.difficulty||"medium").toLowerCase()]||r.difficulty||"متوسط";
+          }
+          return { id:"xl_"+Date.now()+"_"+i, section, category: r.category||r.Specialty?.split(" [")[0]||"General", difficulty, question, options, answer, explanation:String(r.explanation||r.Explanation||"") };
+        });
+        resolve(mapped);
+      } catch(e) { reject(e); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function ExcelImportCard({ title, accentColor, onImport }) {
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState([]);
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
-  const diffCol = {"\u0633\u0647\u0644":"#22c55e","\u0645\u062a\u0648\u0633\u0637":"#f59e0b","\u0635\u0639\u0628":"#ef4444"};
+  const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    e.target.value = "";
     setImporting(true); setErr(""); setPreview([]); setSuccess("");
     try {
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data, { type:"array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval:"" });
-
-      const sectionMap = {
-        "Basic Biomedical Sciences": "Basic Biomedical Sciences",
-        "Pharmaceutical Sciences": "Pharmaceutical Sciences",
-        "Social-Behavioral-Administrative": "Social/Behavioral/Administrative Sciences",
-        "Clinical Sciences": "Clinical Sciences",
-      };
-      const diffMap = { "easy":"سهل", "medium":"متوسط", "hard":"صعب" };
-      const answerMap = { "A":0, "B":1, "C":2, "D":3 };
-
-      const mapped = rows.filter(r => r.Question && (r.A || r.option_a)).map((r, i) => {
-        // Support both ORION format (A,B,C,D,Correct,Specialty) and standard format
-        const isOrion = r.A !== undefined;
-        const question = String(r.Question || r.question || "");
-        const options = isOrion
-          ? [String(r.A), String(r.B), String(r.C), String(r.D)]
-          : [String(r.option_a), String(r.option_b), String(r.option_c), String(r.option_d)];
-        const answer = isOrion
-          ? (answerMap[String(r.Correct).trim().toUpperCase()] ?? 0)
-          : (parseInt(r.correct_answer) || 0);
-
-        // Parse section from Specialty field (e.g. "Clinical Sciences [easy]")
-        let section = "Pharmaceutical Sciences";
-        let difficulty = "متوسط";
-        if (isOrion && r.Specialty) {
-          const sp = String(r.Specialty);
-          for (const [key, val] of Object.entries(sectionMap)) {
-            if (sp.startsWith(key)) { section = val; break; }
-          }
-          difficulty = diffMap[String(r.Difficulty || "medium").toLowerCase()] || "متوسط";
-        } else {
-          section = r.section || "Pharmaceutical Sciences";
-          difficulty = diffMap[String(r.difficulty||"medium").toLowerCase()] || r.difficulty || "متوسط";
-        }
-
-        return {
-          id: "xl_" + Date.now() + "_" + i,
-          section,
-          category: r.Specialty ? String(r.Specialty).split(" [")[0] : (r.category || "General"),
-          difficulty,
-          question,
-          options,
-          answer,
-          explanation: String(r.Explanation || r.explanation || ""),
-        };
-      });
-
-      if (mapped.length === 0) { setErr("No valid questions found. Check column names match the template."); setImporting(false); return; }
+      const mapped = await parseExcelFile(file);
+      if (mapped.length === 0) { setErr("No valid questions found."); setImporting(false); return; }
       setPreview(mapped);
     } catch(e) { setErr("Error: " + e.message); }
     setImporting(false);
   };
 
-  const confirmImport = () => { onImport(preview); setSuccess("\u2705 Imported " + preview.length + " questions successfully!"); setPreview([]); };
+  const confirm = () => { onImport(preview); setSuccess(`✅ Imported ${preview.length} questions!`); setPreview([]); };
 
   return (
-    <div style={{ ...S.card, marginBottom:16, border:"1px solid rgba(16,185,129,0.3)", background:"rgba(16,185,129,0.04)" }}>
-      <div style={{ fontWeight:700, fontSize:15, marginBottom:10 }}>📊 Import from Excel</div>
-      <div style={{ display:"flex", gap:10, marginBottom:12, alignItems:"center" }}>
-        <label style={{ ...S.btn("#10b981"), padding:"10px 16px", cursor:"pointer", fontSize:13 }}>
-          {importing ? "⏳ Reading..." : "📂 Choose .xlsx File"}
+    <div style={{ ...S.card, marginBottom:16, border:`1px solid ${accentColor}33`, background:accentColor+"06" }}>
+      <div style={{ fontWeight:700, fontSize:14, marginBottom:10, color:accentColor }}>📥 {title}</div>
+      <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center", flexWrap:"wrap" }}>
+        <label style={{ ...S.btn(accentColor), padding:"9px 16px", cursor:"pointer", fontSize:13, flexShrink:0 }}>
+          {importing ? "⏳ Reading..." : "📂 Choose .xlsx"}
           <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display:"none" }} />
         </label>
-        <span style={{ color:"#64748b", fontSize:12 }}>Columns: section, category, difficulty, question, option_a, option_b, option_c, option_d, correct_answer (0-3), explanation</span>
+        <span style={{ color:"#64748b", fontSize:11 }}>Columns: section, category, difficulty, question, option_a…d, correct_answer (0-3), explanation</span>
       </div>
-      {err && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8, padding:"10px 14px", color:"#fca5a5", fontSize:13, marginBottom:10 }}>\u26a0\ufe0f {err}</div>}
-      {success && <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.3)", borderRadius:8, padding:"10px 14px", color:"#86efac", fontSize:13, marginBottom:10 }}>{success}</div>}
+      {err && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8, padding:"9px 12px", color:"#fca5a5", fontSize:13, marginBottom:8 }}>⚠️ {err}</div>}
+      {success && <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.3)", borderRadius:8, padding:"9px 12px", color:"#86efac", fontSize:13, marginBottom:8 }}>{success}</div>}
       {preview.length > 0 && (
         <div>
-          <div style={{ fontWeight:700, marginBottom:8, color:"#10b981", fontSize:13 }}>Preview: {preview.length} questions found</div>
-          <div style={{ maxHeight:200, overflowY:"auto", marginBottom:10, display:"flex", flexDirection:"column", gap:5 }}>
+          <div style={{ fontWeight:700, marginBottom:8, color:accentColor, fontSize:13 }}>Preview: {preview.length} questions found</div>
+          <div style={{ maxHeight:160, overflowY:"auto", marginBottom:10, display:"flex", flexDirection:"column", gap:4 }}>
             {preview.slice(0,4).map((q,i) => (
-              <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:8, padding:"8px 12px", fontSize:12 }}>
-                <div style={{ display:"flex", gap:5, marginBottom:3 }}>
+              <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:8, padding:"7px 10px", fontSize:12 }}>
+                <div style={{ display:"flex", gap:5, marginBottom:2 }}>
                   <span style={S.tag((sectionColors2[q.section]||{accent:"#3b82f6"}).accent)}>{q.section.split(" ")[0]}</span>
                   <span style={S.tag(diffCol[q.difficulty]||"#f59e0b")}>{q.difficulty}</span>
                 </div>
-                <div style={{ color:"#e2e8f0" }}>{q.question.substring(0,90)}{q.question.length>90?"...":""}</div>
+                <div style={{ color:"#e2e8f0" }}>{q.question.substring(0,85)}{q.question.length>85?"...":""}</div>
               </div>
             ))}
-            {preview.length > 4 && <div style={{ color:"#64748b", fontSize:11, textAlign:"center" }}>+{preview.length-4} more...</div>}
+            {preview.length > 4 && <div style={{ color:"#64748b", fontSize:11, textAlign:"center" }}>+{preview.length-4} more…</div>}
           </div>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={confirmImport} style={{ ...S.btn("#10b981"), flex:1, padding:11 }}>\u2705 Add {preview.length} Questions to Bank</button>
-            <button onClick={()=>setPreview([])} style={{ ...S.ghost, padding:11 }}>Cancel</button>
+            <button onClick={confirm} style={{ ...S.btn(accentColor), flex:1, padding:10 }}>✅ Add {preview.length} Questions</button>
+            <button onClick={()=>setPreview([])} style={{ ...S.ghost, padding:10 }}>Cancel</button>
           </div>
         </div>
       )}
@@ -311,13 +309,13 @@ function ExcelImport({ onImport }) {
   );
 }
 
-function AdminQuestions({ questions, onChange }) {
+function BankTab({ label, accentColor, questions, onChange, importTitle }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ section:SECTIONS[0], category:"", difficulty:"متوسط", question:"", options:["","","",""], answer:0, explanation:"" });
   const [search, setSearch] = useState("");
   const [filterSec, setFilterSec] = useState("All");
-  const [showImport, setShowImport] = useState(true);
+  const [confirmClear, setConfirmClear] = useState(false);
   const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
 
   const filtered = questions.filter(q =>
@@ -335,13 +333,29 @@ function AdminQuestions({ questions, onChange }) {
   return (
     <div>
       <QuestionStats questions={questions} />
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-        <div><h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>All Questions</h2><span style={{ color:"#64748b", fontSize:13 }}>{filtered.length} shown</span></div>
-        <button style={{ ...S.btn("#10b981"), width:"auto" }} onClick={()=>{ reset(); setEditing(null); setShowForm(true); }}>+ Add</button>
+
+      {/* Import */}
+      <ExcelImportCard title={importTitle} accentColor={accentColor} onImport={qs=>onChange([...questions,...qs])} />
+
+      {/* Header row */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+        <div><h2 style={{ margin:0, fontSize:16, fontWeight:700 }}>All Questions <span style={{ color:"#64748b", fontSize:13, fontWeight:400 }}>({filtered.length} shown / {questions.length} total)</span></h2></div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button style={{ ...S.btn(accentColor), padding:"8px 14px", fontSize:13 }} onClick={()=>{ reset(); setEditing(null); setShowForm(true); }}>+ Add</button>
+          {confirmClear
+            ? <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                <span style={{ color:"#fca5a5", fontSize:12 }}>Delete all {questions.length}?</span>
+                <button onClick={()=>{ onChange([]); setConfirmClear(false); }} style={{ ...S.btn("#ef4444"), padding:"6px 12px", fontSize:12 }}>Yes, Delete</button>
+                <button onClick={()=>setConfirmClear(false)} style={{ ...S.ghost, padding:"6px 10px", fontSize:12 }}>Cancel</button>
+              </div>
+            : <button onClick={()=>setConfirmClear(true)} style={{ ...S.ghost, padding:"8px 14px", fontSize:13, color:"#fca5a5", border:"1px solid rgba(239,68,68,0.3)" }}>🗑️ Clear All</button>
+          }
+        </div>
       </div>
 
+      {/* Add/Edit form */}
       {showForm && (
-        <div style={{ ...S.card, marginBottom:16, border:"1px solid rgba(16,185,129,0.3)" }}>
+        <div style={{ ...S.card, marginBottom:16, border:`1px solid ${accentColor}33` }}>
           <div style={{ fontWeight:700, marginBottom:14 }}>{editing?"Edit Question":"New Question"}</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
             <div><label style={S.label}>Section</label><select style={S.input} value={form.section} onChange={e=>setForm({...form,section:e.target.value})}>{SECTIONS.map(s=><option key={s}>{s}</option>)}</select></div>
@@ -350,56 +364,88 @@ function AdminQuestions({ questions, onChange }) {
           </div>
           <div style={{ marginBottom:10 }}><label style={S.label}>Question</label><textarea style={{ ...S.input, minHeight:70, resize:"vertical" }} value={form.question} onChange={e=>setForm({...form,question:e.target.value})} /></div>
           <div style={{ marginBottom:10 }}>
-            <label style={S.label}>Options (click radio = correct answer)</label>
+            <label style={S.label}>Options (select radio = correct answer)</label>
             {form.options.map((opt,i)=>(
               <div key={i} style={{ display:"flex", gap:8, marginBottom:6, alignItems:"center" }}>
-                <input type="radio" checked={form.answer===i} onChange={()=>setForm({...form,answer:i})} style={{ accentColor:"#10b981" }} />
+                <input type="radio" checked={form.answer===i} onChange={()=>setForm({...form,answer:i})} style={{ accentColor }} />
                 <input style={{ ...S.input, flex:1 }} value={opt} onChange={e=>{ const o=[...form.options]; o[i]=e.target.value; setForm({...form,options:o}); }} placeholder={`Option ${["A","B","C","D"][i]}`} />
               </div>
             ))}
           </div>
           <div style={{ marginBottom:14 }}><label style={S.label}>Explanation</label><textarea style={{ ...S.input, minHeight:55, resize:"vertical" }} value={form.explanation} onChange={e=>setForm({...form,explanation:e.target.value})} /></div>
           <div style={{ display:"flex", gap:8 }}>
-            <button style={S.btn("#10b981")} onClick={save}>💾 Save</button>
+            <button style={S.btn(accentColor)} onClick={save}>💾 Save</button>
             <button style={{ ...S.ghost, flex:1 }} onClick={()=>{ setShowForm(false); setEditing(null); reset(); }}>Cancel</button>
           </div>
         </div>
       )}
 
-      <ExcelImport onImport={qs=>onChange([...questions,...qs])} />
-
+      {/* Filters */}
       <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
-        {["All",...SECTIONS].map(s=>{
-          const bp = s!=="All"?BLUEPRINT[s]:null; const on=filterSec===s;
-          return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"5px 12px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?"#3b82f6":"rgba(255,255,255,0.15)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":on?"#3b82f644":"transparent", color:on&&bp?bp.color:on?"#60a5fa":"#94a3b8" }}>{s==="All"?"All":s==="Social/Behavioral/Administrative Sciences"?"Social/Admin":s.split(" ")[0]}</button>;
+        {["All",...SECTIONS].map(s=>{ const bp=s!=="All"?BLUEPRINT[s]:null; const on=filterSec===s;
+          return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"4px 11px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?accentColor:"rgba(255,255,255,0.15)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":on?accentColor+"22":"transparent", color:on&&bp?bp.color:on?accentColor:"#94a3b8" }}>{s==="All"?"All":s==="Social/Behavioral/Administrative Sciences"?"Social/Admin":s.split(" ")[0]}</button>;
         })}
       </div>
       <input style={{ ...S.input, marginBottom:12 }} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search questions..." />
 
+      {/* List */}
       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {filtered.length===0 && <div style={{ ...S.card, textAlign:"center", padding:30, color:"#475569" }}>No questions found.</div>}
         {filtered.map(q=>{
           const col=SC[q.section]||{accent:"#3b82f6"};
           return (
-            <div key={q.id} style={{ ...S.card, padding:"12px 16px" }}>
+            <div key={q.id} style={{ ...S.card, padding:"11px 15px" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
                 <div style={{ flex:1 }}>
-                  <div style={{ display:"flex", gap:5, marginBottom:6, flexWrap:"wrap" }}>
+                  <div style={{ display:"flex", gap:5, marginBottom:5, flexWrap:"wrap" }}>
                     <span style={S.tag(col.accent)}>{q.section.split(" ")[0]}</span>
                     <span style={S.tag("#94a3b8")}>{q.category}</span>
                     <span style={S.tag(diffCol[q.difficulty])}>{q.difficulty}</span>
-                    {q.id?.startsWith("ai_")&&<span style={S.tag("#f59e0b")}>🤖 AI</span>}
                   </div>
-                  <p style={{ color:"#e2e8f0", fontSize:13, margin:0 }}>{q.question}</p>
+                  <p style={{ color:"#e2e8f0", fontSize:13, margin:0, lineHeight:1.5 }}>{q.question}</p>
                 </div>
                 <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                   <button onClick={()=>{ setForm({...q,options:[...q.options]}); setEditing(q.id); setShowForm(true); }} style={{ ...S.ghost, padding:"5px 10px" }}>✏️</button>
-                  <button onClick={()=>{ if(window.confirm("Delete?")) onChange(questions.filter(x=>x.id!==q.id)); }} style={{ ...S.ghost, padding:"5px 10px", color:"#fca5a5" }}>🗑️</button>
+                  <button onClick={()=>{ if(window.confirm("Delete this question?")) onChange(questions.filter(x=>x.id!==q.id)); }} style={{ ...S.ghost, padding:"5px 10px", color:"#fca5a5" }}>🗑️</button>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function AdminQuestions({ questions, onChangeQuestions }) {
+  const [bankTab, setBankTab] = useState("shared");
+  const [studyQ, setStudyQ] = useState(DB.getStudyQuestions());
+  const [examQ, setExamQ] = useState(DB.getExamQuestions());
+
+  const saveStudy = q => { DB.saveStudyQuestions(q); setStudyQ(q); };
+  const saveExam  = q => { DB.saveExamQuestions(q);  setExamQ(q);  };
+  const saveShared = q => { onChangeQuestions(q); };
+
+  const tabs = [
+    { id:"shared",  label:"📚 Shared Bank",   color:"#3b82f6", count: questions.length },
+    { id:"study",   label:"📖 Study Bank",     color:"#10b981", count: studyQ.length },
+    { id:"exam",    label:"🎯 Exam Bank",       color:"#ef4444", count: examQ.length },
+  ];
+
+  return (
+    <div>
+      {/* Bank selector */}
+      <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+        {tabs.map(t=>(
+          <button key={t.id} onClick={()=>setBankTab(t.id)} style={{ flex:1, padding:"11px", borderRadius:12, border:`2px solid ${bankTab===t.id?t.color:"rgba(255,255,255,0.1)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:bankTab===t.id?t.color+"18":"transparent", color:bankTab===t.id?t.color:"#64748b" }}>
+            {t.label}
+            <span style={{ display:"block", fontSize:11, fontWeight:400, marginTop:2, color:bankTab===t.id?t.color:"#475569" }}>{t.count} questions</span>
+          </button>
+        ))}
+      </div>
+      {bankTab==="shared" && <BankTab label="Shared" accentColor="#3b82f6" questions={questions} onChange={saveShared} importTitle="Import to Shared Bank (used by both Study & Exam)" />}
+      {bankTab==="study"  && <BankTab label="Study"  accentColor="#10b981" questions={studyQ}    onChange={saveStudy}  importTitle="Import to Study Bank only" />}
+      {bankTab==="exam"   && <BankTab label="Exam"   accentColor="#ef4444" questions={examQ}     onChange={saveExam}   importTitle="Import to Exam Bank only" />}
     </div>
   );
 }
@@ -620,7 +666,7 @@ function AdminDashboard({ user, onLogout }) {
             <QuestionStats questions={questions} />
           </div>
         )}
-        {tab==="questions" && <AdminQuestions questions={questions} onChange={saveQ} />}
+        {tab==="questions" && <AdminQuestions questions={questions} onChangeQuestions={saveQ} />}
         {tab==="students" && <AdminStudents users={users} onChange={saveU} />}
         {tab==="reports" && <AdminReports users={users} results={results} />}
         {tab==="settings" && <AdminExamSettings />}
@@ -642,7 +688,13 @@ function StudentDashboard({ user, onLogout }) {
 
   const startSession = (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
-    const q = buildExam(questions, settings);
+    // Use specific bank if available, fall back to shared bank
+    const studyBank = DB.getStudyQuestions();
+    const examBank = DB.getExamQuestions();
+    const pool = sessionMode === "study"
+      ? (studyBank.length > 0 ? studyBank : questions)
+      : (examBank.length > 0 ? examBank : questions);
+    const q = buildExam(pool, settings);
     setMode(sessionMode);
     setExamQ(q);
     setScreen(sessionMode);
