@@ -295,6 +295,8 @@ function AdminQuestions({ questions, onChange }) {
         </div>
       )}
 
+      <ExcelImport onImport={qs=>onChange([...questions,...qs])} />
+
       <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
         {["All",...SECTIONS].map(s=>{
           const bp = s!=="All"?BLUEPRINT[s]:null; const on=filterSec===s;
