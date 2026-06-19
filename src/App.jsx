@@ -711,7 +711,8 @@ function StudentDashboard({ user, onLogout }) {
     setScreen("results");
   };
 
-  if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} />;
+  if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} />;
+  if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} onHome={()=>setScreen("home")} />;
   if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} />;
   if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
 
@@ -739,32 +740,43 @@ function StudentDashboard({ user, onLogout }) {
           ))}
         </div>
 
-        {/* Two mode cards */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:24 }}>
-          {/* Study */}
-          <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.35)", background:"rgba(16,185,129,0.04)" }}>
-            <div style={{ fontSize:28, marginBottom:8 }}>📚</div>
-            <div style={{ fontWeight:800, fontSize:17, color:"#10b981", marginBottom:6 }}>Study Session</div>
-            <div style={{ color:"#64748b", fontSize:12, marginBottom:16, lineHeight:1.6 }}>تعلّم وراجع مع الإجابات الفورية والشرح لكل سؤال</div>
-            <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>⏱️ No Time Limit</span>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>✅ Instant Feedback</span>
+        {/* Three mode cards */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, marginBottom:24 }}>
+          {/* Study Materials */}
+          <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.35)", background:"rgba(139,92,246,0.04)", display:"flex", flexDirection:"column" }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📖</div>
+            <div style={{ fontWeight:800, fontSize:15, color:"#8b5cf6", marginBottom:6 }}>Study Materials</div>
+            <div style={{ color:"#64748b", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>23 درساً شاملاً مع نقاط مراجعة وجداول مرجعية</div>
+            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📚 23 Lessons</span>
+              <span style={{ background:"rgba(139,92,246,0.12)", color:"#8b5cf6", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🗒️ Key Points</span>
             </div>
-            <button onClick={()=>startSession("study")} style={{ ...S.btn("#10b981"), width:"100%", padding:12 }}>Start Study Session →</button>
+            <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#8b5cf6"), width:"100%", padding:10, fontSize:13 }}>Browse Lessons →</button>
+          </div>
+
+          {/* Study Session */}
+          <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.35)", background:"rgba(16,185,129,0.04)", display:"flex", flexDirection:"column" }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📝</div>
+            <div style={{ fontWeight:800, fontSize:15, color:"#10b981", marginBottom:6 }}>Study Session</div>
+            <div style={{ color:"#64748b", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>تدرّب مع إجابات فورية وشرح لكل سؤال</div>
+            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#10b981", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>✅ Instant Feedback</span>
+            </div>
+            <button onClick={()=>startSession("study")} style={{ ...S.btn("#10b981"), width:"100%", padding:10, fontSize:13 }}>Start Session →</button>
           </div>
 
           {/* Exam */}
-          <div style={{ ...S.card, border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.04)" }}>
+          <div style={{ ...S.card, border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.04)", display:"flex", flexDirection:"column" }}>
             <div style={{ fontSize:28, marginBottom:8 }}>🎯</div>
-            <div style={{ fontWeight:800, fontSize:17, color:"#ef4444", marginBottom:6 }}>Official Exam</div>
-            <div style={{ color:"#64748b", fontSize:12, marginBottom:16, lineHeight:1.6 }}>اختبار محاكاة حقيقي بدون إجابات أثناء الاختبار</div>
-            <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>📝 {examSettings.totalQ} Questions</span>
-              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>⏱️ {examSettings.timeMins} min</span>
-              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>🔒 No Feedback</span>
+            <div style={{ fontWeight:800, fontSize:15, color:"#ef4444", marginBottom:6 }}>Official Exam</div>
+            <div style={{ color:"#64748b", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>اختبار محاكاة حقيقي بدون إجابات أثناء الاختبار</div>
+            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {examSettings.totalQ} Q</span>
+              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏱️ {examSettings.timeMins} min</span>
+              <span style={{ background:"rgba(239,68,68,0.12)", color:"#ef4444", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🔒 No Feedback</span>
             </div>
-            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#ef4444"), width:"100%", padding:12 }}>Start Exam →</button>
+            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#ef4444"), width:"100%", padding:10, fontSize:13 }}>Start Exam →</button>
           </div>
         </div>
 
@@ -787,8 +799,448 @@ function StudentDashboard({ user, onLogout }) {
   );
 }
 
-// ===================== STUDY SCREEN (with instant feedback) =====================
-function StudyScreen({ questions, onFinish }) {
+// ===================== STUDY MATERIALS DATA =====================
+const STUDY_LESSONS = [
+  {
+    id:"1.1", section:"Basic Biomedical Sciences", title:"Cardiovascular Physiology",
+    color:"#3b82f6",
+    summary:"The cardiovascular system delivers oxygenated blood to tissues. CO = HR × SV | MAP = CO × SVR | MAP = DBP + 1/3(SBP−DBP) | Normal CO = 4–8 L/min",
+    keyPoints:[
+      "Preload = End-diastolic ventricular volume → reduced by diuretics, increased by IV fluids",
+      "Afterload = SVR → reduced by vasodilators (ACE-I, ARBs, nitrates)",
+      "Contractility → increased by digoxin/dobutamine; decreased in heart failure",
+      "Frank-Starling Law: ↑ preload → ↑ stroke volume, but excess preload → ↓ SV (basis for diuretics in HF)",
+      "Ejection Fraction = SV/EDV. Normal ≥55%. HFrEF: EF <40%",
+      "Baroreceptors: ↓BP → SNS activation → ↑HR + vasoconstriction",
+    ],
+    table:{ headers:["Term","Definition","Clinical Use"], rows:[["Preload","End-diastolic vol (LVEDV)","Diuretics ↓ preload"],["Afterload","SVR","Vasodilators ↓ afterload"],["EF","SV/EDV","HFrEF: EF<40%"],["MAP","DBP+1/3(PP)","Target >65 mmHg"]] }
+  },
+  {
+    id:"1.2", section:"Basic Biomedical Sciences", title:"Renal Physiology & GFR",
+    color:"#3b82f6",
+    summary:"Cockcroft-Gault: CrCl = [(140−age) × weight] / [72 × SCr] × 0.85 (females). Kidneys filter ~180 L/day.",
+    keyPoints:[
+      "CKD G3a (45–59): start dose adjustments | G3b (30–44): many drugs need adjustment | G4 (15–29): avoid nephrotoxics | G5 (<15): dialysis",
+      "RAAS: ↓BP → Renin → Ang I → ACE → Ang II → vasoconstriction + aldosterone",
+      "ACE-I: block ACE, reduce proteinuria, renoprotective. SE: dry cough (bradykinin↑)",
+      "ARBs: block AT1 receptor — same benefit, NO cough",
+      "ACE-I contraindicated in: bilateral renal artery stenosis, pregnancy, hyperkalemia",
+      "Metformin: hold at CrCl <30 (risk of lactic acidosis)",
+    ],
+    table:{ headers:["CKD Stage","GFR (mL/min)","Action"], rows:[["G1","≥90","Monitor"],["G2","60–89","Monitor"],["G3a","45–59","Dose adjust"],["G3b","30–44","Many drugs adjust"],["G4","15–29","Avoid nephrotoxics"],["G5","<15","Dialysis"]] }
+  },
+  {
+    id:"1.3", section:"Basic Biomedical Sciences", title:"Acid-Base Balance",
+    color:"#3b82f6",
+    summary:"Normal: pH 7.35–7.45 | PaCO₂ 35–45 | HCO₃⁻ 22–26. Check pH → PaCO₂ → HCO₃⁻.",
+    keyPoints:[
+      "Respiratory Acidosis: ↓pH, ↑PaCO₂ → COPD, opioid OD, hypoventilation",
+      "Respiratory Alkalosis: ↑pH, ↓PaCO₂ → anxiety, PE, hyperventilation",
+      "Metabolic Acidosis: ↓pH, ↓HCO₃⁻ → DKA, lactic acidosis, renal failure, diarrhea",
+      "Metabolic Alkalosis: ↑pH, ↑HCO₃⁻ → vomiting, loop diuretics, hyperaldosteronism",
+      "COPD: target SpO₂ 88–92% only! Excess O₂ suppresses hypoxic drive → CO₂ retention",
+      "Compensation moves the OPPOSITE parameter in the SAME direction as pH",
+    ],
+    table:{ headers:["Disorder","pH","PaCO₂","HCO₃⁻"], rows:[["Resp Acidosis","↓","↑","Normal/↑"],["Resp Alkalosis","↑","↓","Normal/↓"],["Metab Acidosis","↓","Normal/↓","↓"],["Metab Alkalosis","↑","Normal/↑","↑"]] }
+  },
+  {
+    id:"1.4", section:"Basic Biomedical Sciences", title:"Enzyme Kinetics (Michaelis-Menten)",
+    color:"#3b82f6",
+    summary:"V = Vmax × [S] / (Km + [S]) | Km = [S] at ½Vmax | Lower Km = higher affinity",
+    keyPoints:[
+      "Competitive inhibitor: ↑Km (apparent), Vmax unchanged — overcome by excess substrate",
+      "Non-competitive inhibitor: Km unchanged, ↓Vmax — binds allosteric site",
+      "Uncompetitive inhibitor: ↓both Km and Vmax — binds enzyme-substrate complex",
+      "First-order kinetics: rate ∝ concentration (most drugs)",
+      "Zero-order (saturable) kinetics: Phenytoin, Aspirin OD, Ethanol — small dose → big level rise",
+    ],
+    table:{ headers:["Inhibitor","Km","Vmax","Reversed by substrate?"], rows:[["Competitive","↑","Unchanged","Yes"],["Non-competitive","Unchanged","↓","No"],["Uncompetitive","↓","↓","No"]] }
+  },
+  {
+    id:"1.5", section:"Basic Biomedical Sciences", title:"Microbiology & Gram Stain",
+    color:"#3b82f6",
+    summary:"Gram stain guides empirical antibiotic selection. Gram+ = purple (thick peptidoglycan). Gram− = pink (thin wall + LPS outer membrane).",
+    keyPoints:[
+      "Gram+: S. aureus, Streptococcus, Enterococcus, Clostridium → Exotoxins",
+      "Gram−: E. coli, Klebsiella, Pseudomonas, H. influenzae → Endotoxin (LPS) → septic shock",
+      "Anti-Pseudomonal: Pip-Tazo, Cefepime, Meropenem, Ciprofloxacin — NOT Amoxicillin/Ceftriaxone",
+      "Atypicals (Mycoplasma, Chlamydia, Legionella): no cell wall → treat with macrolides/doxycycline/FQ",
+      "MRSA: Vancomycin IV (monitor AUC/MIC 400–600)",
+    ],
+    table:{ headers:["Feature","Gram+","Gram−"], rows:[["Color","Purple","Pink"],["Wall","Thick peptidoglycan","Thin + LPS outer membrane"],["Toxin","Exotoxins","Endotoxin (LPS)"],["Examples","S. aureus, Strep","E. coli, Pseudomonas"]] }
+  },
+  {
+    id:"1.6", section:"Basic Biomedical Sciences", title:"Immunology — Antibodies & Hypersensitivity",
+    color:"#3b82f6",
+    summary:"IgG (75%): crosses placenta. IgA (15%): mucosal. IgM (8%): first in acute infection. IgE (<0.01%): mast cells, Type I reactions.",
+    keyPoints:[
+      "Type I (Immediate): IgE → mast cells → histamine → Anaphylaxis, allergic asthma",
+      "Type II (Cytotoxic): IgG/IgM + complement → ABO transfusion reaction, hemolytic anemia",
+      "Type III (Immune complex): Ag-Ab deposits → SLE, serum sickness, post-strep GN",
+      "Type IV (Delayed, 48–72h): T-cell mediated → TB skin test, contact dermatitis, transplant rejection",
+      "Elevated IgM = recent/acute infection | Elevated IgG = long-term/past immunity",
+    ],
+    table:{ headers:["Type","Mechanism","Example"], rows:[["I – Immediate","IgE/mast cells","Anaphylaxis"],["II – Cytotoxic","IgG/IgM + complement","Transfusion reaction"],["III – Immune complex","Ag-Ab deposits","SLE, serum sickness"],["IV – Delayed","T-cells (48–72h)","TB test, contact dermatitis"]] }
+  },
+  {
+    id:"2.1", section:"Pharmaceutical Sciences", title:"Pharmacokinetics — ADME Overview",
+    color:"#10b981",
+    summary:"t½ = 0.693 × Vd / CL | Steady state = 4–5 × t½ | Loading dose = Vd × Cp(target) | F(IV) = 100%",
+    keyPoints:[
+      "Bioavailability (F): fraction reaching systemic circulation. IV = 100%. Oral reduced by first-pass metabolism",
+      "First-pass: GI absorption → portal vein → liver → metabolism BEFORE systemic circulation",
+      "Clearance (CL) = Dose/AUC → determines maintenance dose",
+      "Vd = Dose/Cp(initial) → large Vd = extensive tissue distribution",
+      "AUC = total drug exposure over time",
+      "Maintenance dose = CL × Css × τ / F",
+    ],
+    table:{ headers:["Parameter","Formula","Clinical use"], rows:[["t½","0.693 × Vd/CL","Time to steady state"],["CL","Dose/AUC","Maintenance dose"],["Vd","Dose/Cp","Loading dose"],["Loading dose","Vd × Cp(target)","Rapid target level"]] }
+  },
+  {
+    id:"2.2", section:"Pharmaceutical Sciences", title:"CYP450 Drug Metabolism",
+    color:"#10b981",
+    summary:"CYP3A4 metabolizes ~50% of drugs. Inhibitors ↑drug levels. Inducers ↓drug levels. Phase I: oxidation. Phase II: conjugation.",
+    keyPoints:[
+      "CYP3A4 inhibitors: Erythromycin, Clarithromycin, Ketoconazole, Ritonavir, Grapefruit",
+      "CYP3A4 inducers: Rifampicin, Carbamazepine, Phenytoin, St. John's Wort",
+      "CYP2D6 inhibitors: Fluoxetine, Paroxetine, Bupropion — converts Codeine → Morphine",
+      "CYP2C9 inhibitors: Fluconazole, Amiodarone, Metronidazole → ↑Warfarin → bleeding",
+      "Grapefruit: irreversibly inhibits intestinal CYP3A4 for 24–72h → ↑CCBs, statins",
+      "Rifampicin + Warfarin: ↑CYP2C9 → ↓INR → thrombosis",
+    ],
+    table:{ headers:["Enzyme","% Drugs","Key Inhibitors","Key Inducers"], rows:[["CYP3A4","~50%","Erythromycin, Ketoconazole, Grapefruit","Rifampicin, Phenytoin, St. John's Wort"],["CYP2D6","~25%","Fluoxetine, Paroxetine","None significant"],["CYP2C9","~15%","Fluconazole, Metronidazole","Rifampicin"],["CYP1A2","~5%","Ciprofloxacin","Smoking"]] }
+  },
+  {
+    id:"2.3", section:"Pharmaceutical Sciences", title:"Volume of Distribution & Drug Distribution",
+    color:"#10b981",
+    summary:"Vd = Dose/Cp(initial). Small Vd (<1 L/kg) = plasma. Large Vd (>5 L/kg) = tissue sequestration.",
+    keyPoints:[
+      "Small Vd: Warfarin, Furosemide, Aminoglycosides, Heparin (stay in plasma)",
+      "Large Vd: Digoxin (500L), Amiodarone (5000L), Chlorpromazine",
+      "Only FREE drug is pharmacologically active — protein binding: albumin (acidic drugs), α1-AGP (basic drugs)",
+      "Displacement interactions matter most for high-protein-bound, narrow-TI drugs (Warfarin, Phenytoin)",
+      "BBB crossing requires lipophilic, uncharged molecules — Heroin > Morphine (faster BBB penetration)",
+    ],
+    table:{ headers:["Vd","Interpretation","Examples"], rows:[["<1 L/kg","Plasma-restricted","Warfarin, Heparin, Aminoglycosides"],["1–5 L/kg","Tissue distribution","Most drugs"],[">5 L/kg","Extensive tissue (lipophilic)","Digoxin (500L), Amiodarone (5000L)"]] }
+  },
+  {
+    id:"2.4", section:"Pharmaceutical Sciences", title:"Pharmacodynamics & Receptor Theory",
+    color:"#10b981",
+    summary:"TI = LD50/ED50. Narrow-TI drugs: Warfarin, Lithium, Digoxin, Aminoglycosides, Phenytoin, Cyclosporine.",
+    keyPoints:[
+      "Full agonist: 100% efficacy (Morphine) | Partial agonist: <100% — ceiling effect (Buprenorphine)",
+      "Competitive antagonist: reversible, overcome by ↑agonist (Propranolol)",
+      "Non-competitive antagonist: irreversible/allosteric, ↓Vmax (Phenoxybenzamine)",
+      "Ionotropic: direct ion channel, milliseconds (BZD-GABA-A, Nicotinic)",
+      "GPCRs: cAMP/IP3 second messengers (beta-blockers, Opioids, Muscarinic)",
+      "Nuclear receptors: gene transcription, hours–days (Corticosteroids, Thyroid hormones)",
+    ],
+    table:{ headers:["Drug type","Efficacy","Example"], rows:[["Full agonist","100%","Morphine"],["Partial agonist","<100% (ceiling)","Buprenorphine"],["Competitive antagonist","Blocks — reversible","Propranolol"],["Non-competitive","Blocks — irreversible","Phenoxybenzamine"]] }
+  },
+  {
+    id:"2.5", section:"Pharmaceutical Sciences", title:"Toxicology & Antidotes",
+    color:"#10b981",
+    summary:"Memorize antidotes — extremely high-yield on SPLE.",
+    keyPoints:[
+      "Paracetamol → NAC (within 8–10h). Mechanism: NAPQI depletes glutathione → hepatic necrosis",
+      "Opioids → Naloxone (short t½ — may need infusion)",
+      "Benzodiazepines → Flumazenil (AVOID in seizure/chronic BZD users)",
+      "Warfarin → Vit K + 4-factor PCC (active bleeding)",
+      "Beta-blockers → Glucagon + Atropine | Digoxin → DigiFab",
+      "Organophosphates → Atropine + Pralidoxime (2-PAM within 48h)",
+      "Methanol/Ethylene glycol → Fomepizole | Cyanide → Hydroxocobalamin",
+      "Methemoglobinemia → Methylene Blue | CO → 100% O₂",
+    ],
+    table:{ headers:["Toxin","Antidote","Key Note"], rows:[["Paracetamol","NAC","<8h max benefit"],["Opioids","Naloxone","Short t½, may repeat"],["Warfarin","Vit K + 4F-PCC","PCC for active bleed"],["Organophosphates","Atropine + 2-PAM","2-PAM within 48h"],["Beta-blocker","Glucagon","Bypasses β-receptor"],["CO","100% O₂","↓COHb t½ 5h→1h"]] }
+  },
+  {
+    id:"3.1", section:"Social/Behavioral/Administrative Sciences", title:"Biomedical Ethics — Four Principles",
+    color:"#8b5cf6",
+    summary:"Autonomy | Beneficence | Non-maleficence | Justice. Capacity = understand + appreciate + reason + communicate.",
+    keyPoints:[
+      "Autonomy: respect patient's right to decide — competent adult refusal MUST be respected",
+      "Beneficence: act in patient's best interest",
+      "Non-maleficence: 'First, do no harm' — avoid toxic drugs when benefit < risk",
+      "Justice: fair distribution of resources (formulary decisions, transplant lists)",
+      "Capacity is decision-specific — mild dementia ≠ automatic incapacity",
+      "Confidentiality exceptions: written consent, legal subpoena, imminent harm to 3rd party, mandatory reporting",
+    ],
+    table:{ headers:["Principle","Definition","Common conflict"], rows:[["Autonomy","Patient's right to decide","vs Beneficence"],["Beneficence","Act in best interest","vs Autonomy"],["Non-maleficence","Do no harm","vs Beneficence in palliation"],["Justice","Fair resource distribution","Individual vs society"]] }
+  },
+  {
+    id:"3.2", section:"Social/Behavioral/Administrative Sciences", title:"KSA Pharmacy Law & Regulation",
+    color:"#8b5cf6",
+    summary:"SFDA: drug registration + GMP + pharmacovigilance. SCFHS: pharmacist licensing + SPLE. MOH: national health policy.",
+    keyPoints:[
+      "SFDA: drug registration, GMP inspection, pharmacovigilance, recalls — ADR reporting mandatory",
+      "SCFHS: licenses health professionals, administers SPLE exam",
+      "MOH: national health policy, Essential Medicines List, MOH hospitals",
+      "NUPCO: central drug procurement for government sector",
+      "CBAHI: hospital accreditation | CCHI: health insurance",
+      "Schedule I (Morphine, Fentanyl): TRIPLICATE Rx — original only, NO fax/photocopy",
+      "Schedule II (BZD): duplicate Rx | Schedule III (Codeine combos): standard Rx",
+    ],
+    table:{ headers:["Authority","Main Role"], rows:[["SFDA","Drug registration, GMP, pharmacovigilance"],["SCFHS","Pharmacist licensing, SPLE"],["MOH","Health policy, Essential Medicines"],["NUPCO","Government drug procurement"],["CBAHI","Hospital accreditation"]] }
+  },
+  {
+    id:"3.3", section:"Social/Behavioral/Administrative Sciences", title:"Pharmacoeconomics & Health Outcomes",
+    color:"#8b5cf6",
+    summary:"ICER = (Cost_new − Cost_old) / (Effect_new − Effect_old). 1 QALY = 1 year in perfect health.",
+    keyPoints:[
+      "CMA: cost only — when outcomes are equal (generic substitution)",
+      "CEA: cost per clinical unit ($/mmHg, $/LYS) — comparing same disease",
+      "CUA: cost per QALY — comparing across different diseases",
+      "CBA: net monetary benefit — full financial ROI",
+      "ICER < WTP threshold → cost-effective",
+      "QALY combines length AND quality of life",
+    ],
+    table:{ headers:["Analysis","Outcome","When to use"], rows:[["CMA","Cost only","Equal outcomes"],["CEA","$/clinical unit","Same disease"],["CUA","$/QALY","Across diseases"],["CBA","Net $","Full ROI"]] }
+  },
+  {
+    id:"4.1", section:"Clinical Sciences", title:"Therapeutic Drug Monitoring (TDM)",
+    color:"#ef4444",
+    summary:"TDM = Narrow TI + high PK variability + clear concentration-effect relationship + established target range. Steady state = 4–5 × t½.",
+    keyPoints:[
+      "Vancomycin: AUC/MIC 400–600 (Bayesian preferred) — avoid nephrotoxicity",
+      "Gentamicin: Peak 5–10, Trough <2 mg/L — once-daily preferred",
+      "Phenytoin: 10–20 mg/L — NON-LINEAR kinetics (small dose → big level rise)",
+      "Lithium: 0.6–1.2 mEq/L — toxicity >1.5. Precipitated by NSAIDs, dehydration, thiazides",
+      "Digoxin: 0.5–0.9 ng/mL (HF) — hypokalemia ↑ toxicity. Sample ≥6h post-dose",
+      "Measure trough JUST BEFORE next dose at steady state",
+    ],
+    table:{ headers:["Drug","Target","Sampling","Key Note"], rows:[["Vancomycin","AUC/MIC 400–600","Bayesian","Avoid nephrotoxicity"],["Phenytoin","10–20 mg/L","Steady state 7–10d","Non-linear kinetics"],["Lithium","0.6–1.2 mEq/L","12h post-dose","NSAIDs ↑ toxicity"],["Digoxin","0.5–0.9 ng/mL (HF)","≥6h post-dose","Hypokalemia ↑ toxicity"]] }
+  },
+  {
+    id:"4.2", section:"Clinical Sciences", title:"Pregnancy & Lactation",
+    color:"#ef4444",
+    summary:"Pregnancy alters PK: ↑Vd, ↑renal clearance, ↑hepatic metabolism. Folic acid 0.4 mg/day starting 1 month BEFORE conception.",
+    keyPoints:[
+      "First-line HTN in pregnancy: Methyldopa, Labetalol, Nifedipine",
+      "AVOID in pregnancy: ACE-I/ARB (fetal renal damage), Warfarin (X), Methotrexate (X), Isotretinoin (X)",
+      "Category X: Warfarin, Isotretinoin, Methotrexate, Thalidomide — absolutely contraindicated",
+      "Tetracyclines (>1st trim): tooth discoloration + bone growth suppression in fetus",
+      "Folic acid 4 mg/day if prior neural tube defect pregnancy",
+      "Safest antidiabetics: Metformin + Insulin",
+    ],
+    table:{ headers:["FDA Cat","Meaning","Examples"], rows:[["A","No risk — human studies","Folic acid, Levothyroxine"],["B","Animal safe, no human data","Penicillins, Metformin"],["C","Animal risk, benefit may outweigh","Fluconazole single-dose"],["D","Human risk — benefit may justify","Phenytoin, Tetracyclines"],["X","Contraindicated","Warfarin, Isotretinoin, MTX"]] }
+  },
+  {
+    id:"4.3", section:"Clinical Sciences", title:"Pediatric Pharmacotherapy",
+    color:"#ef4444",
+    summary:"Children ≠ small adults. Immature CYP enzymes + renal function. Always use weight-based dosing (mg/kg), cap at max adult dose.",
+    keyPoints:[
+      "Tetracyclines <8 years: tooth discoloration + bone growth depression",
+      "Fluoroquinolones <18 years: cartilage damage",
+      "Aspirin <18 years with viral illness: Reye's syndrome (liver failure + encephalopathy)",
+      "Codeine <12 years: ultra-rapid CYP2D6 metabolizers → fatal respiratory depression",
+      "Honey <1 year: infant botulism",
+      "Chloramphenicol in neonates: Gray Baby Syndrome (cardiovascular collapse)",
+      "Promethazine <2 years: fatal respiratory depression",
+    ],
+    table:{ headers:["Drug","Age restriction","Reason"], rows:[["Tetracyclines","<8 years","Teeth/bone damage"],["Fluoroquinolones","<18 years","Cartilage damage"],["Aspirin","<18 + viral illness","Reye's syndrome"],["Codeine","<12 years","Fatal respiratory depression"],["Honey","<1 year","Infant botulism"]] }
+  },
+  {
+    id:"4.4", section:"Clinical Sciences", title:"Hypertension Management",
+    color:"#ef4444",
+    summary:"Target BP <130/80 (AHA/ACC 2017) in most adults. ACE-I cough: 5–20% → switch to ARB.",
+    keyPoints:[
+      "ACE-I (Ramipril): HF, post-MI, CKD+proteinuria, DM — avoid: pregnancy, bilateral RAS, hyperkalemia",
+      "ARB (Losartan): same as ACE-I, no cough — avoid: pregnancy",
+      "CCB-DHP (Amlodipine): elderly, angina, isolated systolic HTN — avoid: HFrEF",
+      "Thiazide (HCTZ): elderly, Black patients — avoid: gout, hypokalemia",
+      "Beta-blocker: post-MI, HF, angina — avoid: asthma, AV block, bradycardia",
+      "HTN urgency (>180/120, no organ damage): gradual ↓ over 24–48h with oral agents",
+      "HTN emergency (+ organ damage): IV agents, ICU, ↓MAP by 25% in 1h",
+    ],
+    table:{ headers:["Class","First-line for","Avoid in"], rows:[["ACE-I","HF, CKD, DM","Pregnancy, bilateral RAS"],["ARB","ACE-I cough","Pregnancy"],["CCB-DHP","Elderly, angina","HFrEF"],["Thiazide","Elderly, Black","Gout"],["Beta-blocker","Post-MI, HF","Asthma, AV block"]] }
+  },
+  {
+    id:"4.5", section:"Clinical Sciences", title:"Type 2 Diabetes Mellitus",
+    color:"#ef4444",
+    summary:"First-line: Metformin. SGLT2-i + GLP-1 RA have CV/renal mortality benefit. HbA1c target: <7% most adults.",
+    keyPoints:[
+      "Metformin: ↓hepatic gluconeogenesis, first-line, weight neutral — stop at CrCl <30 (lactic acidosis); hold before contrast",
+      "SGLT2-i (Empagliflozin): ↑urinary glucose, CV + renal protection, weight loss — SE: genital infections, euglycemic DKA",
+      "GLP-1 RA (Semaglutide): ↑insulin (glucose-dep), weight loss, CV benefit — SE: pancreatitis, nausea",
+      "Sulfonylureas: ↑insulin secretion, cheap — SE: hypoglycemia + weight gain",
+      "Prefer SGLT2-i or GLP-1 RA in ASCVD, HF, or CKD regardless of A1c",
+      "HbA1c targets: most adults <7% | elderly/frail <8% | young/healthy <6.5%",
+    ],
+    table:{ headers:["Drug","Mechanism","Key Benefit","Warning"], rows:[["Metformin","↓Gluconeogenesis","First-line, weight neutral","Hold if CrCl<30"],["SGLT2-i","↑Urine glucose","CV+renal protection","Genital infections, DKA"],["GLP-1 RA","↑Insulin (glucose-dep)","Weight loss, CV benefit","Pancreatitis"],["Sulphonylureas","↑Insulin secretion","Cheap, effective","Hypoglycemia, weight↑"]] }
+  },
+  {
+    id:"4.6", section:"Clinical Sciences", title:"Antibiotic Selection by Pathogen",
+    color:"#ef4444",
+    summary:"Always de-escalate based on culture results. MRSA: Vancomycin IV. Pseudomonas: Pip-Tazo/Cefepime/Meropenem.",
+    keyPoints:[
+      "MSSA: Cloxacillin/Nafcillin/Cefazolin — NOT Amoxicillin alone",
+      "MRSA: Vancomycin IV (AUC/MIC 400–600) | Alternative: Linezolid, Daptomycin",
+      "Pseudomonas (severe): Pip-Tazo + Aminoglycoside — combine 2 agents",
+      "C. difficile: Vancomycin PO or Fidaxomicin (Metronidazole no longer preferred)",
+      "TB (RIPE): Rifampicin + INH + Pyrazinamide + Ethambutol × 6 months",
+      "H. pylori: PPI + Amoxicillin + Clarithromycin × 14 days",
+      "E. coli UTI: Nitrofurantoin/TMP-SMX (avoid empiric FQ)",
+    ],
+    table:{ headers:["Pathogen","First-line","Avoid"], rows:[["MRSA","Vancomycin IV","Amoxicillin"],["Pseudomonas","Pip-Tazo + Aminoglycoside","Ceftriaxone, Amoxicillin"],["C. difficile","Vancomycin PO / Fidaxomicin","Metronidazole (not preferred)"],["TB","RIPE × 6 months","Monotherapy"],["H. pylori","PPI + Amox + Clarithromycin","—"]] }
+  },
+  {
+    id:"4.7", section:"Clinical Sciences", title:"Anticoagulation Therapy",
+    color:"#ef4444",
+    summary:"UFH: aPTT 60–90s → Protamine. LMWH: Anti-Xa. Warfarin: INR 2–3. DOACs: preferred in AF (no monitoring).",
+    keyPoints:[
+      "HIT: platelets ↓5–10 days after heparin → PARADOXICAL thrombosis. Stop ALL heparin → Argatroban/DOAC",
+      "Warfarin reversal: Vit K (onset 6–12h) + 4F-PCC (active bleeding)",
+      "Dabigatran reversal: Idarucizumab (Praxbind)",
+      "Rivaroxaban/Apixaban reversal: Andexanet alfa",
+      "INR 2–3: most indications | 2.5–3.5: mechanical mitral valve",
+      "CHA₂DS₂-VASc ≥2 (men) or ≥3 (women) → anticoagulate in AF → prefer DOACs",
+    ],
+    table:{ headers:["Drug","Mechanism","Monitoring","Reversal"], rows:[["UFH","Antithrombin III","aPTT","Protamine"],["LMWH","Factor Xa","Anti-Xa (special cases)","Protamine (60%)"],["Warfarin","Vit K factors II,VII,IX,X","INR","Vit K + 4F-PCC"],["DOACs","Xa or IIa","None routine","Andexanet/Idarucizumab"]] }
+  },
+  {
+    id:"4.8", section:"Clinical Sciences", title:"Asthma & COPD Management",
+    color:"#ef4444",
+    summary:"GINA: SABA monotherapy no longer recommended. Prefer ICS-Formoterol PRN. COPD GOLD stages by FEV1%.",
+    keyPoints:[
+      "GINA Step 1: ICS-Formoterol PRN | Step 2: Low-dose ICS daily | Step 3: Low-dose ICS+LABA",
+      "Step 4: Medium-high ICS+LABA+/-LAMA | Step 5: Add biologic (Omalizumab anti-IgE, Mepolizumab anti-IL5)",
+      "LABA NEVER as monotherapy in asthma → ↑ asthma death risk",
+      "COPD GOLD 1: FEV1 ≥80% | GOLD 2: 50–80% | GOLD 3: 30–50% | GOLD 4: <30%",
+      "COPD exacerbation: SABA + systemic steroids 5 days + antibiotics if purulent sputum",
+      "Acute asthma attack reliever: Salbutamol (SABA) inhaler/nebulizer",
+    ],
+    table:{ headers:["GINA Step","Severity","Controller"], rows:[["1","Intermittent","ICS-Formoterol PRN"],["2","Mild persistent","Low-dose ICS daily"],["3","Mild-moderate","Low-dose ICS + LABA"],["4","Moderate-severe","Medium-high ICS + LABA ± LAMA"],["5","Severe","+ Biologic"]] }
+  },
+  {
+    id:"4.9", section:"Clinical Sciences", title:"Major Drug-Drug Interactions",
+    color:"#ef4444",
+    summary:"Most DDIs: CYP450 induction/inhibition, P-gp, or pharmacodynamic synergy. ~5% of hospital admissions.",
+    keyPoints:[
+      "Warfarin + Rifampicin: ↑CYP2C9 induction → ↓INR → thrombosis",
+      "Warfarin + Fluconazole/Metronidazole: inhibit CYP2C9 → ↑INR → bleeding",
+      "Statins + Erythromycin/Itraconazole: ↑statin → rhabdomyolysis → use Rosuvastatin/Pravastatin",
+      "Clopidogrel + Omeprazole/Esomeprazole: ↓activation via CYP2C19 → switch to Pantoprazole",
+      "Digoxin + Amiodarone/Verapamil: ↑digoxin × 2 → ↓dose 50% + monitor",
+      "SSRI + Tramadol/MAOI: Serotonin syndrome (mental status ↓ + autonomic instability + clonus)",
+      "Fluoroquinolones + Antacids/Iron/Calcium: chelation → ↓FQ absorption → separate by 2–4h",
+    ],
+    table:{ headers:["Object Drug","Precipitant","Effect","Action"], rows:[["Warfarin","Rifampicin","↓INR → thrombosis","↑Warfarin dose"],["Warfarin","Fluconazole","↑INR → bleeding","↓Warfarin ~50%"],["Statins","Erythromycin","↑statin → rhabdomyo","Rosuvastatin/Pravastatin"],["Clopidogrel","Omeprazole","↓activation","Switch to Pantoprazole"],["Digoxin","Amiodarone","↑Digoxin ×2","↓dose 50%"]] }
+  },
+];
+
+// ===================== STUDY MATERIALS SCREEN =====================
+function StudyMaterialsScreen({ onBack, onStartStudy }) {
+  const [selected, setSelected] = useState(null);
+  const secColors = { "Basic Biomedical Sciences":"#3b82f6","Pharmaceutical Sciences":"#10b981","Social/Behavioral/Administrative Sciences":"#8b5cf6","Clinical Sciences":"#ef4444" };
+
+  if (selected) {
+    const lesson = STUDY_LESSONS.find(l => l.id === selected);
+    return (
+      <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+        <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.08)", padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
+          <button onClick={()=>setSelected(null)} style={{ ...S.ghost, padding:"6px 12px", fontSize:13 }}>← Back</button>
+          <div style={{ color:lesson.color, fontWeight:800 }}>Lesson {lesson.id}: {lesson.title}</div>
+        </div>
+        <div style={{ maxWidth:760, margin:"0 auto", padding:24 }}>
+          {/* Summary box */}
+          <div style={{ background:lesson.color+"15", border:`1px solid ${lesson.color}44`, borderRadius:14, padding:18, marginBottom:20 }}>
+            <div style={{ color:lesson.color, fontWeight:700, fontSize:13, marginBottom:8 }}>📌 Core Concept</div>
+            <p style={{ color:"#e2e8f0", fontSize:14, lineHeight:1.7, margin:0 }}>{lesson.summary}</p>
+          </div>
+
+          {/* Key points */}
+          <div style={{ ...S.card, marginBottom:20 }}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:14, color:lesson.color }}>🎯 Key Points</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {lesson.keyPoints.map((pt,i)=>(
+                <div key={i} style={{ display:"flex", gap:10, padding:"10px 14px", background:"rgba(255,255,255,0.03)", borderRadius:10, borderLeft:`3px solid ${lesson.color}` }}>
+                  <span style={{ color:lesson.color, fontWeight:800, flexShrink:0 }}>{i+1}.</span>
+                  <span style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.6 }}>{pt}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Table */}
+          {lesson.table && (
+            <div style={{ ...S.card, marginBottom:24, padding:0, overflow:"hidden" }}>
+              <div style={{ padding:"12px 16px", background:lesson.color+"18", fontWeight:700, fontSize:14, color:lesson.color }}>📊 Quick Reference Table</div>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                <thead><tr style={{ background:"rgba(255,255,255,0.05)" }}>
+                  {lesson.table.headers.map(h=><th key={h} style={{ padding:"10px 14px", textAlign:"left", color:"#64748b", fontWeight:600, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>{h}</th>)}
+                </tr></thead>
+                <tbody>{lesson.table.rows.map((row,i)=>(
+                  <tr key={i} style={{ borderBottom:"1px solid rgba(255,255,255,0.05)" }}>
+                    {row.map((cell,j)=><td key={j} style={{ padding:"9px 14px", color:j===0?"#f1f5f9":"#94a3b8", fontWeight:j===0?600:400 }}>{cell}</td>)}
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+
+          <button onClick={onStartStudy} style={{ ...S.btn("#10b981"), width:"100%", padding:14, fontSize:15 }}>
+            📝 Start Study Session with Questions →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Lesson list grouped by section
+  const grouped = {};
+  STUDY_LESSONS.forEach(l => { if(!grouped[l.section]) grouped[l.section]=[]; grouped[l.section].push(l); });
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+      <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:"1px solid rgba(255,255,255,0.08)", padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={onBack} style={{ ...S.ghost, padding:"6px 12px", fontSize:13 }}>← Dashboard</button>
+        <div style={{ fontWeight:800, fontSize:16 }}>📚 Study Materials</div>
+        <div style={{ marginLeft:"auto", color:"#64748b", fontSize:12 }}>{STUDY_LESSONS.length} Lessons · 23 Topics</div>
+      </div>
+      <div style={{ maxWidth:760, margin:"0 auto", padding:24 }}>
+        <div style={{ ...S.card, marginBottom:24, background:"rgba(16,185,129,0.06)", border:"1px solid rgba(16,185,129,0.3)" }}>
+          <div style={{ display:"flex", gap:14, alignItems:"center" }}>
+            <div style={{ fontSize:36 }}>📖</div>
+            <div>
+              <div style={{ fontWeight:800, fontSize:16, color:"#10b981" }}>SPLE Study Material</div>
+              <div style={{ color:"#64748b", fontSize:13, marginTop:4 }}>23 lessons covering all 4 SCFHS domains · Per SCFHS Blueprint</div>
+              <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
+                {[["10%","Basic Biomedical","#3b82f6"],["35%","Pharmaceutical","#10b981"],["20%","Social/Admin","#8b5cf6"],["35%","Clinical","#ef4444"]].map(([pct,label,c])=>(
+                  <span key={label} style={{ background:c+"18", color:c, fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:20 }}>{pct} {label}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {Object.entries(grouped).map(([section, lessons])=>(
+          <div key={section} style={{ marginBottom:24 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+              <div style={{ width:4, height:20, background:secColors[section], borderRadius:2 }} />
+              <div style={{ fontWeight:700, fontSize:14, color:secColors[section] }}>{section}</div>
+              <div style={{ color:"#475569", fontSize:12 }}>({lessons.length} lessons)</div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {lessons.map(l=>(
+                <button key={l.id} onClick={()=>setSelected(l.id)} style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${l.color}22`, borderRadius:12, padding:"14px 18px", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:14, transition:"all 0.2s" }}
+                  onMouseEnter={e=>{e.currentTarget.style.background=`${l.color}12`; e.currentTarget.style.borderColor=`${l.color}55`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor=`${l.color}22`;}}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:l.color+"22", display:"flex", alignItems:"center", justifyContent:"center", color:l.color, fontWeight:800, fontSize:13, flexShrink:0 }}>{l.id}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, color:"#f1f5f9", fontSize:14 }}>{l.title}</div>
+                    <div style={{ color:"#64748b", fontSize:12, marginTop:2 }}>{l.keyPoints.length} key points · Click to study</div>
+                  </div>
+                  <div style={{ color:l.color, fontSize:18 }}>→</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function StudyScreen({ questions, onFinish, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showExp, setShowExp] = useState(false);
@@ -798,12 +1250,14 @@ function StudyScreen({ questions, onFinish }) {
   const col = SC[q.section] || { accent:"#10b981", bg:"#1e4a3a" };
   const diffCol = { "سهل":"#22c55e", "متوسط":"#f59e0b", "صعب":"#ef4444" };
   const next = () => { setShowExp(false); if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
-  const answered_count = Object.keys(answers).length;
 
   return (
     <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
       <div style={{ background:col.bg, borderBottom:`1px solid #10b98144`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <span style={{ color:"#94a3b8", fontSize:13 }}>📚 Study · Q {cur+1}/{questions.length}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={onHome} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
+          <span style={{ color:"#94a3b8", fontSize:13 }}>📚 Study · Q {cur+1}/{questions.length}</span>
+        </div>
         <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>Study Mode</span>
         <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
       </div>
