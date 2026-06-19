@@ -1176,15 +1176,15 @@ const STUDY_LESSONS = [
 // ===================== STUDY MATERIALS SCREEN =====================
 // ===================== STUDY MATERIALS + SESSION (integrated flow) =====================
 function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
-  // phase: "list" | "section" | "lesson" | "questions"
   const [phase, setPhase] = useState("list");
   const [activeSection, setActiveSection] = useState(null);
   const [activeLesson, setActiveLesson] = useState(null);
-  const [lessonIdx, setLessonIdx] = useState(0); // which lesson within section
-  const [sectionPhase, setSectionPhase] = useState("lesson"); // "lesson" | "questions"
+  const [lessonIdx, setLessonIdx] = useState(0);
+  const [sectionPhase, setSectionPhase] = useState("lesson");
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showExp, setShowExp] = useState(false);
+  const [sectionQuestions, setSectionQuestions] = useState([]);
 
   const secColors = { "Basic Biomedical Sciences":"#3b82f6","Pharmaceutical Sciences":"#10b981","Social/Behavioral/Administrative Sciences":"#8b5cf6","Clinical Sciences":"#ef4444" };
   const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
@@ -1192,9 +1192,20 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
   STUDY_LESSONS.forEach(l => { if(!grouped[l.section]) grouped[l.section]=[]; grouped[l.section].push(l); });
   const sections = Object.keys(grouped);
 
-  // Get questions for this section
-  const getSectionQuestions = (section) => {
-    const pool = allQuestions.filter(q => q.section === section);
+  // Read ALL question banks merged
+  const getAllQ = () => {
+    const shared = DB.getQuestions();
+    const study  = DB.getStudyQuestions();
+    const exam   = DB.getExamQuestions();
+    const merged = [...shared, ...study, ...exam];
+    // deduplicate by id
+    const seen = new Set();
+    return merged.filter(q => { if(seen.has(q.id)) return false; seen.add(q.id); return true; });
+  };
+
+  const buildSectionQ = (section) => {
+    const all = getAllQ();
+    const pool = all.filter(q => q.section === section);
     return [...pool].sort(() => Math.random() - 0.5).slice(0, 10);
   };
 
@@ -1204,24 +1215,26 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
     setSectionPhase("lesson");
     setActiveLesson(grouped[section][0]);
     setCur(0); setAnswers({}); setShowExp(false);
+    setSectionQuestions([]); // will be built when questions phase starts
     setPhase("section");
   };
 
   const goNextLesson = () => {
     const lessons = grouped[activeSection];
     if (lessonIdx + 1 < lessons.length) {
-      setLessonIdx(p => p+1);
-      setActiveLesson(lessons[lessonIdx+1]);
+      setLessonIdx(lessonIdx + 1);
+      setActiveLesson(lessons[lessonIdx + 1]);
       setSectionPhase("lesson");
     } else {
-      // all lessons done — show questions
+      // all lessons done — build questions then show them
+      const qs = buildSectionQ(activeSection);
+      setSectionQuestions(qs);
       setSectionPhase("questions");
       setCur(0); setAnswers({}); setShowExp(false);
     }
   };
 
   const color = activeSection ? (secColors[activeSection] || "#3b82f6") : "#3b82f6";
-  const sectionQuestions = activeSection ? getSectionQuestions(activeSection) : [];
 
   // ── PHASE: LIST ─────────────────────────────────────────────
   if (phase === "list") return (
@@ -1335,7 +1348,7 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
       return (
         <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
           <div style={{ background:"rgba(255,255,255,0.03)", borderBottom:`1px solid ${color}33`, padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
-            <button onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(p=>p-1); setActiveLesson(lessons[lessonIdx-1]); }}} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Back</button>
+            <button onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(lessonIdx-1); setActiveLesson(lessons[lessonIdx-1]); setSectionPhase("lesson"); }}} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Back</button>
             <div>
               <div style={{ color:color, fontWeight:800, fontSize:14 }}>Lesson {l.id}: {l.title}</div>
               <div style={{ color:"#475569", fontSize:11 }}>{l.section}</div>
@@ -1363,64 +1376,66 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
       );
     }
 
-    // — show questions for this section —
-    if (sectionPhase === "questions") {
-      const q = sectionQuestions[cur];
-      if (!q) {
-        // no questions available
+      if (sectionPhase === "questions") {
+        const q = sectionQuestions[cur];
+        if (!q) {
+          return (
+            <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, padding:24 }}>
+              <div style={{ fontSize:48 }}>📭</div>
+              <div style={{ fontWeight:700, fontSize:18, textAlign:"center" }}>No questions uploaded for this section yet</div>
+              <p style={{ color:"#64748b", textAlign:"center", maxWidth:400 }}>ارفع أسئلة من صفحة Questions أو ابدأ Study Session الكاملة</p>
+              <div style={{ display:"flex", gap:12 }}>
+                <button onClick={()=>setPhase("list")} style={{ ...S.ghost, padding:"10px 20px" }}>← Back to Sections</button>
+                <button onClick={onStartStudy} style={{ ...S.btn("#10b981"), padding:"10px 20px" }}>📝 Start Full Study Session →</button>
+              </div>
+            </div>
+          );
+        }
+        const answered = answers[q.id] !== undefined;
+        const correct = answers[q.id] === q.answer;
+        const col = SC[q.section] || { accent:color, bg:"#1e2a3a" };
+        const next = () => {
+          setShowExp(false);
+          if (cur < sectionQuestions.length-1) setCur(p=>p+1);
+          else setPhase("list");
+        };
         return (
-          <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
-            <div style={{ fontSize:48 }}>📭</div>
-            <div style={{ fontWeight:700, fontSize:18 }}>No questions available for this section yet.</div>
-            <button onClick={()=>setPhase("list")} style={{ ...S.ghost, padding:"10px 24px" }}>← Back to Sections</button>
+          <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
+            <div style={{ background:col.bg||"#1e2a3a", borderBottom:`1px solid ${color}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>← Lessons</button>
+                <span style={{ color:"#94a3b8", fontSize:13 }}>Practice Q {cur+1}/{sectionQuestions.length}</span>
+              </div>
+              <span style={{ background:color+"22", color:color, fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📝 {activeSection.split(" ")[0]} Questions</span>
+              <span style={{ color:diffCol[q.difficulty]||"#f59e0b", fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
+            </div>
+            <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/sectionQuestions.length)*100}%`, height:"100%", background:color, transition:"width 0.3s" }} /></div>
+            <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
+              <div style={{ color:color, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
+              <div style={{ ...S.card, border:`1px solid ${color}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
+              <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
+                {q.options.map((opt,i)=>{
+                  let bg="rgba(255,255,255,0.04)",border="1px solid rgba(255,255,255,0.1)",c="#e2e8f0";
+                  if(answered){ if(i===q.answer){bg="rgba(34,197,94,0.12)";border="1.5px solid #22c55e";c="#86efac";} else if(i===answers[q.id]){bg="rgba(239,68,68,0.12)";border="1.5px solid #ef4444";c="#fca5a5";} }
+                  return <button key={i} onClick={()=>{ if(!answered){setAnswers(p=>({...p,[q.id]:i})); setShowExp(true);}}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
+                    <span style={{ width:26,height:26,borderRadius:7,background:"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
+                    {opt}
+                    {answered&&i===q.answer&&<span style={{ marginLeft:"auto" }}>✓</span>}
+                    {answered&&i===answers[q.id]&&i!==q.answer&&<span style={{ marginLeft:"auto" }}>✗</span>}
+                  </button>;
+                })}
+              </div>
+              {showExp && <div style={{ background:correct?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1px solid ${correct?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
+                <div style={{ fontWeight:700, marginBottom:6, color:correct?"#86efac":"#fca5a5", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
+                <p style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation||"No explanation provided."}</p>
+              </div>}
+              {answered && <button onClick={next} style={{ ...S.btn(color), width:"100%", padding:13 }}>
+                {cur<sectionQuestions.length-1?"Next Question →":"🏁 Done — Back to Sections"}
+              </button>}
+            </div>
           </div>
         );
       }
-      const answered = answers[q.id] !== undefined;
-      const correct = answers[q.id] === q.answer;
-      const col = SC[q.section] || { accent:color, bg:"#1e2a3a" };
-      const next = () => {
-        setShowExp(false);
-        if (cur < sectionQuestions.length-1) setCur(p=>p+1);
-        else setPhase("list"); // back to section list after finishing
-      };
-      const sectionIdx = sections.indexOf(activeSection);
-      return (
-        <div style={{ minHeight:"100vh", background:"#0f172a", fontFamily:"system-ui,sans-serif", color:"#f1f5f9" }}>
-          <div style={{ background:col.bg||"#1e2a3a", borderBottom:`1px solid ${color}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }} style={{ background:"rgba(255,255,255,0.1)", border:"none", borderRadius:8, padding:"5px 12px", color:"#94a3b8", cursor:"pointer", fontSize:12 }}>← Lessons</button>
-              <span style={{ color:"#94a3b8", fontSize:13 }}>Practice Q {cur+1}/{sectionQuestions.length}</span>
-            </div>
-            <span style={{ background:color+"22", color:color, fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📝 {activeSection.split(" ")[0]} Questions</span>
-            <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
-          </div>
-          <div style={{ height:4, background:"rgba(255,255,255,0.08)" }}><div style={{ width:`${((cur+1)/sectionQuestions.length)*100}%`, height:"100%", background:color, transition:"width 0.3s" }} /></div>
-          <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
-            <div style={{ color:color, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
-            <div style={{ ...S.card, border:`1px solid ${color}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
-            <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
-              {q.options.map((opt,i)=>{
-                let bg="rgba(255,255,255,0.04)",border="1px solid rgba(255,255,255,0.1)",c="#e2e8f0";
-                if(answered){ if(i===q.answer){bg="rgba(34,197,94,0.12)";border="1.5px solid #22c55e";c="#86efac";} else if(i===answers[q.id]){bg="rgba(239,68,68,0.12)";border="1.5px solid #ef4444";c="#fca5a5";} }
-                return <button key={i} onClick={()=>{ if(!answered){setAnswers(p=>({...p,[q.id]:i})); setShowExp(true);}}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
-                  <span style={{ width:26,height:26,borderRadius:7,background:"rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#94a3b8" }}>{["A","B","C","D"][i]}</span>
-                  {opt}
-                  {answered&&i===q.answer&&<span style={{ marginLeft:"auto" }}>✓</span>}
-                  {answered&&i===answers[q.id]&&i!==q.answer&&<span style={{ marginLeft:"auto" }}>✗</span>}
-                </button>;
-              })}
-            </div>
-            {showExp && <div style={{ background:correct?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1px solid ${correct?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
-              <div style={{ fontWeight:700, marginBottom:6, color:correct?"#86efac":"#fca5a5", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-              <p style={{ color:"#cbd5e1", fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation||"No explanation provided."}</p>
-            </div>}
-            {answered && <button onClick={next} style={{ ...S.btn(color), width:"100%", padding:13 }}>
-              {cur<sectionQuestions.length-1?"Next Question →":"🏁 Done — Back to Sections"}
-            </button>}
-          </div>
-        </div>
-      );
     }
   }
 
