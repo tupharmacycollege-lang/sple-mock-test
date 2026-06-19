@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 
 const API_URL = "https://y0ww5f6rnf.execute-api.eu-north-1.amazonaws.com/prod";
 
@@ -164,213 +165,6 @@ function QuestionStats({ questions }) {
   );
 }
 
-// ===================== AI GENERATOR =====================
-function AIGenerator({ questions, onAddQuestions }) {
-  const [mode, setMode] = useState("balanced"); // balanced | custom
-  const [customSection, setCustomSection] = useState("Pharmaceutical Sciences");
-  const [customSub, setCustomSub] = useState("Pharmacology & Toxicology");
-  const [difficulty, setDifficulty] = useState("متوسط");
-  const [totalCount, setTotalCount] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState("");
-  const [generated, setGenerated] = useState([]);
-  const [selected, setSelected] = useState([]);
-  const [err, setErr] = useState("");
-  const diffCol = {"سهل":"#22c55e","متوسط":"#f59e0b","صعب":"#ef4444"};
-
-  // Calculate balanced distribution
-  const getBalancedPlan = (count) => {
-    return SECTIONS.map(sec => {
-      const bp = BLUEPRINT[sec];
-      const n = Math.max(1, Math.round(count * bp.pct / 100));
-      const sub = bp.sub[Math.floor(Math.random() * bp.sub.length)];
-      return { section:sec, subcategory:sub, n };
-    });
-  };
-
-  const callClaude = async (section, subcategory, count, diff) => {
-    const bp = BLUEPRINT[section];
-    const prompt = `You are an expert pharmacist exam question writer for the Saudi Pharmacist Licensure Examination (SPLE) by SCHS.
-
-Generate exactly ${count} high-quality multiple-choice questions:
-- Section: ${section} (${bp.pct}% of SPLE)
-- Subcategory: ${subcategory}
-- Difficulty: ${diff==="سهل"?"Easy (recall-based factual)":diff==="متوسط"?"Medium (mechanism/pathophysiology-based)":"Hard (clinical scenarios, complex interactions, calculations)"}
-
-Rules:
-- Relevant to Saudi pharmacy practice and SCHS standards
-- Exactly 4 options, ONE correct answer
-- answer is 0-indexed (0=A, 1=B, 2=C, 3=D)
-- Detailed explanation for the correct answer
-
-Respond ONLY with a JSON array, no markdown:
-[{"question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}]`;
-
-    const res = await fetch(`${API_URL}/generate`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ section, subcategory, count, difficulty })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data.questions;
-  };
-
-  const generate = async () => {
-    setLoading(true); setErr(""); setGenerated([]); setSelected([]);
-
-    try {
-      let allQuestions = [];
-
-      if (mode === "balanced") {
-        const plan = getBalancedPlan(totalCount);
-        for (const item of plan) {
-          setProgress(`Generating ${item.n} questions for ${item.section.split(" ")[0]}...`);
-          const qs = await callClaude(item.section, item.subcategory, item.n, difficulty);
-          allQuestions = [...allQuestions, ...qs.map((q,i) => ({ id:"ai_"+Date.now()+"_"+Math.random(), section:item.section, category:item.subcategory, difficulty, question:q.question, options:q.options, answer:q.answer, explanation:q.explanation }))];
-        }
-      } else {
-        setProgress(`Generating questions for ${customSection.split(" ")[0]}...`);
-        const qs = await callClaude(customSection, customSub, totalCount, difficulty);
-        allQuestions = qs.map((q,i) => ({ id:"ai_"+Date.now()+"_"+i, section:customSection, category:customSub, difficulty, question:q.question, options:q.options, answer:q.answer, explanation:q.explanation }));
-      }
-
-      setGenerated(allQuestions);
-      setSelected(allQuestions.map(q=>q.id));
-      setProgress("");
-    } catch(e) {
-      setErr(e.message || "Generation failed. Check your API key and try again.");
-      setProgress("");
-    } finally { setLoading(false); }
-  };
-
-  const handleAdd = () => { onAddQuestions(generated.filter(q=>selected.includes(q.id))); setGenerated([]); setSelected([]); };
-
-  // Balanced preview
-  const balancedPreview = getBalancedPlan(totalCount);
-
-  return (
-    <div>
-      <div style={{ marginBottom:20 }}>
-        <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>🤖 AI Question Generator</h1>
-        <p style={{ color:"#64748b", margin:0 }}>Auto-generate balanced SPLE questions using Claude AI based on the official SCHS blueprint</p>
-      </div>
-
-      {/* Mode selector */}
-      <div style={{ display:"flex", background:"rgba(255,255,255,0.04)", borderRadius:12, padding:4, marginBottom:16 }}>
-        <button onClick={()=>setMode("balanced")} style={{ flex:1, padding:"10px", borderRadius:10, border:"none", cursor:"pointer", fontWeight:700, fontSize:14, background:mode==="balanced"?"linear-gradient(135deg,#3b82f6,#6366f1)":"transparent", color:mode==="balanced"?"#fff":"#64748b" }}>
-          ⚖️ Balanced (All Sections)
-        </button>
-        <button onClick={()=>setMode("custom")} style={{ flex:1, padding:"10px", borderRadius:10, border:"none", cursor:"pointer", fontWeight:700, fontSize:14, background:mode==="custom"?"linear-gradient(135deg,#10b981,#059669)":"transparent", color:mode==="custom"?"#fff":"#64748b" }}>
-          🎯 Custom Section
-        </button>
-      </div>
-
-      <div style={{ ...S.card, marginBottom:16 }}>
-        {mode==="balanced" ? (
-          <div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-              <div>
-                <div style={{ fontWeight:700, marginBottom:2 }}>Balanced Generation</div>
-                <div style={{ color:"#64748b", fontSize:12 }}>Questions distributed by blueprint percentages across all 4 sections</div>
-              </div>
-              <div style={{ textAlign:"right" }}>
-                <div style={{ fontSize:22, fontWeight:800, color:"#3b82f6" }}>{totalCount}</div>
-                <div style={{ color:"#64748b", fontSize:11 }}>total</div>
-              </div>
-            </div>
-            <input type="range" min={4} max={40} value={totalCount} onChange={e=>setTotalCount(+e.target.value)} style={{ width:"100%", accentColor:"#3b82f6", marginBottom:12 }} />
-            {/* Preview */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:14 }}>
-              {SECTIONS.map(sec => {
-                const bp = BLUEPRINT[sec]; const n = Math.max(1,Math.round(totalCount*bp.pct/100));
-                const short = sec==="Social/Behavioral/Administrative Sciences"?"Social/Admin":sec.split(" ")[0];
-                return (
-                  <div key={sec} style={{ background:bp.color+"11", border:`1px solid ${bp.color}33`, borderRadius:10, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ color:"#94a3b8", fontSize:12 }}>{short}</span>
-                    <span style={{ color:bp.color, fontWeight:800 }}>~{n} q</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
-            <div>
-              <label style={S.label}>Section</label>
-              <select style={S.input} value={customSection} onChange={e=>{ setCustomSection(e.target.value); setCustomSub(BLUEPRINT[e.target.value].sub[0]); }}>
-                {SECTIONS.map(s=><option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={S.label}>Subcategory</label>
-              <select style={S.input} value={customSub} onChange={e=>setCustomSub(e.target.value)}>
-                {BLUEPRINT[customSection].sub.map(s=><option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={S.label}>Questions: <span style={{ color:"#10b981", fontWeight:800 }}>{totalCount}</span></label>
-              <input type="range" min={1} max={10} value={totalCount} onChange={e=>setTotalCount(+e.target.value)} style={{ width:"100%", accentColor:"#10b981", marginTop:8 }} />
-            </div>
-          </div>
-        )}
-
-        {/* Difficulty */}
-        <div style={{ marginBottom:14 }}>
-          <label style={S.label}>Difficulty Level</label>
-          <div style={{ display:"flex", gap:8 }}>
-            {DIFFICULTIES.map(d=><button key={d} onClick={()=>setDifficulty(d)} style={{ flex:1, padding:10, borderRadius:8, border:`2px solid ${difficulty===d?diffCol[d]:"rgba(255,255,255,0.1)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:difficulty===d?diffCol[d]+"22":"transparent", color:difficulty===d?diffCol[d]:"#64748b" }}>{d}</button>)}
-          </div>
-        </div>
-
-        <button onClick={generate} disabled={loading} style={{ ...S.btn(mode==="balanced"?"#3b82f6":"#10b981"), width:"100%", padding:13, fontSize:15, opacity:loading?0.7:1 }}>
-          {loading ? `⏳ ${progress||"Generating..."}` : `✨ Generate ${totalCount} ${mode==="balanced"?"Balanced ":""}AI Questions`}
-        </button>
-      </div>
-
-      {err && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:12, padding:14, marginBottom:16, color:"#fca5a5", fontSize:13 }}>⚠️ {err}</div>}
-
-      {generated.length > 0 && (
-        <div>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-            <div><div style={{ fontWeight:700 }}>Review Generated Questions</div><div style={{ color:"#64748b", fontSize:12 }}>{selected.length}/{generated.length} selected</div></div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={()=>setSelected(generated.map(q=>q.id))} style={{ ...S.ghost, padding:"7px 12px", fontSize:12 }}>All</button>
-              <button onClick={()=>setSelected([])} style={{ ...S.ghost, padding:"7px 12px", fontSize:12 }}>None</button>
-            </div>
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
-            {generated.map((q,idx) => {
-              const on = selected.includes(q.id); const col = SC[q.section]||{accent:"#3b82f6"};
-              return (
-                <div key={q.id} onClick={()=>setSelected(p=>p.includes(q.id)?p.filter(x=>x!==q.id):[...p,q.id])} style={{ ...S.card, cursor:"pointer", border:`1.5px solid ${on?col.accent:"rgba(255,255,255,0.08)"}`, background:on?col.accent+"08":"rgba(255,255,255,0.03)", padding:14 }}>
-                  <div style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
-                    <div style={{ width:16, height:16, borderRadius:4, border:`2px solid ${on?col.accent:"rgba(255,255,255,0.2)"}`, background:on?col.accent:"transparent", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#fff", flexShrink:0 }}>{on&&"✓"}</div>
-                    <span style={{ color:"#475569", fontSize:11 }}>Q{idx+1}</span>
-                    <span style={S.tag(col.accent)}>{q.section.split(" ")[0]}</span>
-                    <span style={S.tag(diffCol[q.difficulty])}>{q.difficulty}</span>
-                    <span style={{ color:"#475569", fontSize:11 }}>{q.category}</span>
-                  </div>
-                  <p style={{ color:"#e2e8f0", fontSize:13, margin:"0 0 8px", lineHeight:1.6 }}>{q.question}</p>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:5, marginBottom:8 }}>
-                    {q.options.map((opt,i)=><div key={i} style={{ background:i===q.answer?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.04)", border:`1px solid ${i===q.answer?"rgba(34,197,94,0.3)":"rgba(255,255,255,0.06)"}`, borderRadius:7, padding:"5px 8px", fontSize:11, color:i===q.answer?"#86efac":"#94a3b8" }}><strong>{["A","B","C","D"][i]}.</strong> {opt}</div>)}
-                  </div>
-                  <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:7, padding:"6px 10px" }}>
-                    <span style={{ color:"#64748b", fontSize:11 }}>💡 </span><span style={{ color:"#94a3b8", fontSize:11 }}>{q.explanation}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <button onClick={handleAdd} disabled={selected.length===0} style={{ ...S.btn("#10b981"), width:"100%", padding:13, fontSize:15, opacity:selected.length===0?0.5:1 }}>
-            ✅ Add {selected.length} Questions to Question Bank
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ===================== ADMIN QUESTIONS =====================
 
 const sectionColors2 = { "Basic Biomedical Sciences":{accent:"#3b82f6"}, "Pharmaceutical Sciences":{accent:"#10b981"}, "Social/Behavioral/Administrative Sciences":{accent:"#8b5cf6"}, "Clinical Sciences":{accent:"#ef4444"} };
@@ -387,26 +181,21 @@ function ExcelImport({ onImport }) {
     if (!file) return;
     setImporting(true); setErr(""); setPreview([]); setSuccess("");
     try {
-      const text = await file.text();
-      const lines = text.split("\n").filter(l => l.trim());
-      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g,""));
-      const mapped = lines.slice(1).map((line, i) => {
-        const cols = line.split(",").map(c => c.trim().replace(/"/g,""));
-        const row = {};
-        headers.forEach((h, idx) => { row[h] = cols[idx] || ""; });
-        if (!row.question || !row.option_a) return null;
-        return {
-          id: "xl_" + Date.now() + "_" + i,
-          section: row.section || "Pharmaceutical Sciences",
-          category: row.category || "General",
-          difficulty: row.difficulty || "متوسط",
-          question: row.question,
-          options: [row.option_a, row.option_b, row.option_c, row.option_d],
-          answer: parseInt(row.correct_answer) || 0,
-          explanation: row.explanation || "",
-        };
-      }).filter(Boolean);
-      if (mapped.length === 0) { setErr("No valid questions found. Use CSV format with correct column names."); setImporting(false); return; }
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type:"array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval:"" });
+      const mapped = rows.filter(r => r.question && r.option_a).map((r, i) => ({
+        id: "xl_" + Date.now() + "_" + i,
+        section: r.section || "Pharmaceutical Sciences",
+        category: r.category || "General",
+        difficulty: r.difficulty || "متوسط",
+        question: String(r.question),
+        options: [String(r.option_a), String(r.option_b), String(r.option_c), String(r.option_d)],
+        answer: parseInt(r.correct_answer) || 0,
+        explanation: String(r.explanation || ""),
+      }));
+      if (mapped.length === 0) { setErr("No valid questions found. Check column names match the template."); setImporting(false); return; }
       setPreview(mapped);
     } catch(e) { setErr("Error: " + e.message); }
     setImporting(false);
@@ -416,13 +205,13 @@ function ExcelImport({ onImport }) {
 
   return (
     <div style={{ ...S.card, marginBottom:16, border:"1px solid rgba(16,185,129,0.3)", background:"rgba(16,185,129,0.04)" }}>
-      <div style={{ fontWeight:700, fontSize:15, marginBottom:10 }}>📊 Import from CSV</div>
+      <div style={{ fontWeight:700, fontSize:15, marginBottom:10 }}>📊 Import from Excel</div>
       <div style={{ display:"flex", gap:10, marginBottom:12, alignItems:"center" }}>
         <label style={{ ...S.btn("#10b981"), padding:"10px 16px", cursor:"pointer", fontSize:13 }}>
-          {importing ? "⏳ Reading..." : "📂 Choose .csv File"}
-          <input type="file" accept=".csv" onChange={handleFile} style={{ display:"none" }} />
+          {importing ? "⏳ Reading..." : "📂 Choose .xlsx File"}
+          <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display:"none" }} />
         </label>
-        <span style={{ color:"#64748b", fontSize:12 }}>CSV columns: section, category, difficulty, question, option_a, option_b, option_c, option_d, correct_answer (0-3), explanation</span>
+        <span style={{ color:"#64748b", fontSize:12 }}>Columns: section, category, difficulty, question, option_a, option_b, option_c, option_d, correct_answer (0-3), explanation</span>
       </div>
       {err && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8, padding:"10px 14px", color:"#fca5a5", fontSize:13, marginBottom:10 }}>\u26a0\ufe0f {err}</div>}
       {success && <div style={{ background:"rgba(34,197,94,0.1)", border:"1px solid rgba(34,197,94,0.3)", borderRadius:8, padding:"10px 14px", color:"#86efac", fontSize:13, marginBottom:10 }}>{success}</div>}
@@ -632,7 +421,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"ai",icon:"🤖",label:"AI Generator",badge:"NEW"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"}];
 
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
@@ -667,7 +456,6 @@ function AdminDashboard({ user, onLogout }) {
             <QuestionStats questions={questions} />
           </div>
         )}
-        {tab==="ai" && <AIGenerator questions={questions} onAddQuestions={qs=>{ const u=[...questions,...qs]; saveQ(u); setTab("questions"); }} />}
         {tab==="questions" && <AdminQuestions questions={questions} onChange={saveQ} />}
         {tab==="students" && <AdminStudents users={users} onChange={saveU} />}
         {tab==="reports" && <AdminReports users={users} results={results} />}
