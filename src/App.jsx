@@ -1262,18 +1262,85 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
     setPhase("section");
   };
 
-  const goNextLesson = () => {
+  const [generatingQ, setGeneratingQ] = useState(false);
+
+  const generateAIQuestions = async (section, lessons) => {
+    setGeneratingQ(true);
+    const lessonTitles = lessons.map(l => l.title).join(", ");
+    const keyContent = lessons.map(l =>
+      l.blocks.filter(b => b.type === "table" || b.type === "formula")
+        .map(b => b.type === "table"
+          ? `Table: ${b.headers.join(" | ")}\n${b.rows.map(r=>r.join(" | ")).join("\n")}`
+          : `${b.label}: ${b.lines.join(" | ")}`)
+        .join("\n")
+    ).join("\n\n");
+
+    const prompt = `You are an expert SPLE (Saudi Pharmacist Licensure Examination) question writer following SCHS/SCFHS blueprint standards.
+
+Generate exactly 10 high-quality multiple-choice questions for:
+Section: ${section}
+Topics covered: ${lessonTitles}
+
+Key content to test:
+${keyContent.substring(0, 3000)}
+
+SPLE question requirements:
+- Clinical scenario-based when possible (real pharmacy practice situations)
+- Exactly 4 options (A, B, C, D), ONE correct answer
+- Mix of difficulty: 3 easy (recall), 4 medium (application), 3 hard (clinical judgment)
+- Options should be plausible — avoid obviously wrong distractors
+- Answer indexed 0-3 (0=A, 1=B, 2=C, 3=D)
+- Clear explanation (2-3 sentences, no markdown)
+- Relevant to Saudi pharmacy practice and SCHS standards
+
+Respond ONLY with valid JSON array, no markdown, no backticks:
+[{"question":"...","options":["A text","B text","C text","D text"],"answer":0,"explanation":"...","difficulty":"سهل"}]
+difficulty must be one of: سهل, متوسط, صعب`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 4000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "[]";
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      return parsed.map((q, i) => ({
+        id: `ai_${section}_${Date.now()}_${i}`,
+        section,
+        category: lessons[0]?.title || section,
+        difficulty: q.difficulty || "متوسط",
+        question: q.question,
+        options: q.options,
+        answer: q.answer,
+        explanation: q.explanation || ""
+      }));
+    } catch(e) {
+      console.error("AI generation failed:", e);
+      return buildSectionQ(activeSection); // fallback to existing questions
+    } finally {
+      setGeneratingQ(false);
+    }
+  };
+
+  const goNextLesson = async () => {
     const lessons = grouped[activeSection];
     if (lessonIdx + 1 < lessons.length) {
       setLessonIdx(lessonIdx + 1);
       setActiveLesson(lessons[lessonIdx + 1]);
       setSectionPhase("lesson");
     } else {
-      // all lessons done — build questions then show them
-      const qs = buildSectionQ(activeSection);
-      setSectionQuestions(qs);
+      // all lessons done — generate AI questions
       setSectionPhase("questions");
       setCur(0); setAnswers({}); setShowExp(false);
+      const qs = await generateAIQuestions(activeSection, lessons);
+      setSectionQuestions(qs);
     }
   };
 
@@ -1427,6 +1494,28 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
     }
 
       if (sectionPhase === "questions") {
+        // Show loading while AI generates
+        if (generatingQ || sectionQuestions.length === 0) {
+          return (
+            <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:20 }}>
+              <div style={{ fontSize:48, animation:"spin 1.5s linear infinite" }}>⚕️</div>
+              <div style={{ fontWeight:800, fontSize:18, color:color }}>Generating SPLE Questions…</div>
+              <div style={{ color:T.ink3, fontSize:14, maxWidth:340, textAlign:"center" }}>
+                Claude AI is crafting 10 clinical questions tailored to {activeSection.split(" ")[0]} — per SCHS blueprint standards
+              </div>
+              <div style={{ display:"flex", gap:6, marginTop:8 }}>
+                {[0,1,2].map(i=>(
+                  <div key={i} style={{ width:8, height:8, borderRadius:"50%", background:color, opacity:0.4, animation:`pulse 1.2s ease-in-out ${i*0.4}s infinite` }} />
+                ))}
+              </div>
+              <style>{`
+                @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+                @keyframes pulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+              `}</style>
+            </div>
+          );
+        }
+
         const q = sectionQuestions[cur];
         if (!q) {
           return (
