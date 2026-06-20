@@ -268,11 +268,12 @@ function parseExcelFile(file) {
   });
 }
 
-function ExcelImportCard({ title, accentColor, onImport }) {
+function ExcelImportCard({ title, accentColor, onImport, onReplace }) {
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState([]);
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
+  const [mode, setMode] = useState("replace"); // "replace" | "add"
   const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
 
   const handleFile = async (e) => {
@@ -288,11 +289,33 @@ function ExcelImportCard({ title, accentColor, onImport }) {
     setImporting(false);
   };
 
-  const confirm = () => { onImport(preview); setSuccess(`✅ Imported ${preview.length} questions!`); setPreview([]); };
+  const confirm = () => {
+    if (mode === "replace") onReplace(preview);
+    else onImport(preview);
+    setSuccess(`✅ ${mode === "replace" ? "Replaced with" : "Added"} ${preview.length} questions!`);
+    setPreview([]);
+  };
 
   return (
     <div style={{ ...S.card, marginBottom:16, border:`1px solid ${accentColor}33`, background:accentColor+"06" }}>
-      <div style={{ fontWeight:700, fontSize:14, marginBottom:10, color:accentColor }}>📥 {title}</div>
+      <div style={{ fontWeight:700, fontSize:14, marginBottom:12, color:accentColor }}>📥 {title}</div>
+
+      {/* Replace / Add toggle */}
+      <div style={{ display:"flex", background:T.bg2, borderRadius:8, padding:3, marginBottom:12, border:`1px solid ${T.border}` }}>
+        <button onClick={()=>setMode("replace")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:mode==="replace"?accentColor:"transparent", color:mode==="replace"?"#fff":T.ink3, transition:"all 0.2s" }}>
+          🔄 Replace All
+        </button>
+        <button onClick={()=>setMode("add")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:mode==="add"?accentColor:"transparent", color:mode==="add"?"#fff":T.ink3, transition:"all 0.2s" }}>
+          ➕ Add to Existing
+        </button>
+      </div>
+
+      {mode==="replace" && (
+        <div style={{ background:"rgba(196,122,30,0.08)", border:"1px solid rgba(196,122,30,0.3)", borderRadius:7, padding:"7px 12px", marginBottom:10, fontSize:12, color:T.ink2, fontFamily:"system-ui,sans-serif" }}>
+          ⚠️ Replace All will delete existing questions and replace with the new file.
+        </div>
+      )}
+
       <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center", flexWrap:"wrap" }}>
         <label style={{ ...S.btn(accentColor), padding:"9px 16px", cursor:"pointer", fontSize:13, flexShrink:0 }}>
           {importing ? "⏳ Reading..." : "📂 Choose .xlsx"}
@@ -304,7 +327,7 @@ function ExcelImportCard({ title, accentColor, onImport }) {
       {success && <div style={{ background:"rgba(26,122,94,0.10)", border:"1px solid rgba(26,122,94,0.35)", borderRadius:8, padding:"9px 12px", color:"#1A7A5E", fontSize:13, marginBottom:8 }}>{success}</div>}
       {preview.length > 0 && (
         <div>
-          <div style={{ fontWeight:700, marginBottom:8, color:accentColor, fontSize:13 }}>Preview: {preview.length} questions found</div>
+          <div style={{ fontWeight:700, marginBottom:8, color:accentColor, fontSize:13 }}>Preview: {preview.length} questions · Mode: <span style={{ color:mode==="replace"?"#B83B2A":"#1A7A5E" }}>{mode==="replace"?"Replace All":"Add to Existing"}</span></div>
           <div style={{ maxHeight:160, overflowY:"auto", marginBottom:10, display:"flex", flexDirection:"column", gap:4 }}>
             {preview.slice(0,4).map((q,i) => (
               <div key={i} style={{ background:T.bg2, borderRadius:8, padding:"7px 10px", fontSize:12 }}>
@@ -318,7 +341,9 @@ function ExcelImportCard({ title, accentColor, onImport }) {
             {preview.length > 4 && <div style={{ color:"#8C7B6E", fontSize:11, textAlign:"center" }}>+{preview.length-4} more…</div>}
           </div>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={confirm} style={{ ...S.btn(accentColor), flex:1, padding:10 }}>✅ Add {preview.length} Questions</button>
+            <button onClick={confirm} style={{ ...S.btn(mode==="replace"?"#B83B2A":accentColor), flex:1, padding:10 }}>
+              {mode==="replace" ? `🔄 Replace with ${preview.length} Questions` : `➕ Add ${preview.length} Questions`}
+            </button>
             <button onClick={()=>setPreview([])} style={{ ...S.ghost, padding:10 }}>Cancel</button>
           </div>
         </div>
@@ -353,7 +378,7 @@ function BankTab({ label, accentColor, questions, onChange, importTitle }) {
       <QuestionStats questions={questions} />
 
       {/* Import */}
-      <ExcelImportCard title={importTitle} accentColor={accentColor} onImport={qs=>onChange([...questions,...qs])} />
+      <ExcelImportCard title={importTitle} accentColor={accentColor} onImport={qs=>onChange([...questions,...qs])} onReplace={qs=>onChange(qs)} />
 
       {/* Header row */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
@@ -1463,7 +1488,7 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
               {showExp && (
                 <div style={{ background:correct?"rgba(26,122,94,0.08)":"rgba(184,59,42,0.06)", border:`1.5px solid ${correct?"rgba(26,122,94,0.35)":"rgba(184,59,42,0.30)"}`, borderRadius:12, padding:16, marginBottom:20 }}>
                   <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13, fontFamily:"system-ui,sans-serif" }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-                  <p style={{ color:T.ink2, fontSize:13.5, lineHeight:1.7, margin:0, fontFamily:"Georgia,serif" }}>💡 {q.explanation||"No explanation provided."}</p>
+                  <p style={{ color:T.ink2, fontSize:13.5, lineHeight:1.7, margin:0, fontFamily:"Georgia,serif" }}>💡 {(q.explanation||"No explanation provided.").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/`/g,"")}</p>
                 </div>
               )}
             </div>
@@ -1471,9 +1496,9 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
             <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"14px 24px", display:"flex", justifyContent:"center", alignItems:"center", gap:20, boxShadow:"0 -4px 16px rgba(60,40,20,0.08)" }}>
               {answered
                 ? <button onClick={goNext} style={{ ...S.btn(color), padding:"11px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
-                    {cur<sectionQuestions.length-1 ? "→ Next" : "✅ Done"}
+                    {cur<sectionQuestions.length-1 ? "← Next" : "✅ Done"}
                   </button>
-                : <button disabled style={{ ...S.btn(T.bg3), padding:"11px 28px", fontSize:14, opacity:0.4, color:T.ink3 }}>→ Next</button>
+                : <button disabled style={{ ...S.btn(T.bg3), padding:"11px 28px", fontSize:14, opacity:0.4, color:T.ink3 }}>← Next</button>
               }
               <span style={{ color:T.ink3, fontSize:13, fontFamily:"system-ui,sans-serif", minWidth:60, textAlign:"center" }}>{cur+1} / {sectionQuestions.length}</span>
               <button onClick={goPrev} disabled={cur===0}
@@ -1532,7 +1557,7 @@ function StudyScreen({ questions, onFinish, onHome }) {
         </div>
         {showExp && <div style={{ background:correct?"rgba(26,122,94,0.10)":"rgba(184,59,42,0.08)", border:`1px solid ${correct?"rgba(26,122,94,0.35)":"rgba(184,59,42,0.30)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
           <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-          <p style={{ color:T.ink2, fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation || "No explanation provided."}</p>
+          <p style={{ color:T.ink2, fontSize:13, lineHeight:1.7, margin:0 }}>💡 {(q.explanation || "No explanation provided.").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/`/g,"")}</p>
         </div>}
         {answered && <button onClick={next} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:13 }}>{cur<questions.length-1?"Next →":"🏁 Finish Study Session"}</button>}
       </div>
