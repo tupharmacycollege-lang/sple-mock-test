@@ -9,7 +9,6 @@ const api = {
     try {
       const cached = localStorage.getItem("sple_questions_cache");
       const cacheTime = localStorage.getItem("sple_questions_cache_time");
-      // Use cache if less than 10 minutes old
       if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 600000) {
         return JSON.parse(cached);
       }
@@ -26,17 +25,15 @@ const api = {
       return cached ? JSON.parse(cached) : DEFAULT_QUESTIONS;
     }
   },
-  saveResult: async (result) => {
+  updateQuestion: async (id, fields) => {
     try {
-      await fetch(`${API_URL}/results`, {
-        method: "POST",
+      await fetch(`${API_URL}/questions/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(result)
+        body: JSON.stringify(fields)
       });
-    } catch (e) {
-      console.error("Failed to save result:", e);
-    }
-  }
+    } catch (e) { console.error(e); }
+  },
 };
 
 const DB = {
@@ -44,13 +41,10 @@ const DB = {
   saveUsers: (u) => localStorage.setItem("sple_users", JSON.stringify(u)),
   getResults: () => JSON.parse(localStorage.getItem("sple_results") || "[]"),
   saveResults: (r) => localStorage.setItem("sple_results", JSON.stringify(r)),
-  // Shared bank (legacy + manual) — now loads from API cache
   getQuestions: () => { const s = localStorage.getItem("sple_questions_cache"); return s ? JSON.parse(s) : DEFAULT_QUESTIONS; },
   saveQuestions: (q) => localStorage.setItem("sple_questions_cache", JSON.stringify(q)),
-  // Study-only bank
   getStudyQuestions: () => { const s = localStorage.getItem("sple_study_questions"); return s ? JSON.parse(s) : []; },
   saveStudyQuestions: (q) => localStorage.setItem("sple_study_questions", JSON.stringify(q)),
-  // Exam-only bank
   getExamQuestions: () => { const s = localStorage.getItem("sple_exam_questions"); return s ? JSON.parse(s) : []; },
   saveExamQuestions: (q) => localStorage.setItem("sple_exam_questions", JSON.stringify(q)),
   getStudySettings: () => JSON.parse(localStorage.getItem("sple_study_settings") || "null") || { totalQ: 50, diffPct: { "سهل": 33, "متوسط": 34, "صعب": 33 } },
@@ -497,34 +491,159 @@ function BankTab({ label, accentColor, questions, onChange, importTitle }) {
 }
 
 function AdminQuestions({ questions, onChangeQuestions }) {
-  const [bankTab, setBankTab] = useState("shared");
-  const [studyQ, setStudyQ] = useState(DB.getStudyQuestions());
-  const [examQ, setExamQ] = useState(DB.getExamQuestions());
+  const [search, setSearch] = useState("");
+  const [filterSec, setFilterSec] = useState("All");
+  const [filterAssign, setFilterAssign] = useState("all");
+  const [saving, setSaving] = useState({});
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
 
-  const saveStudy = q => { DB.saveStudyQuestions(q); setStudyQ(q); };
-  const saveExam  = q => { DB.saveExamQuestions(q);  setExamQ(q);  };
-  const saveShared = q => { onChangeQuestions(q); };
+  const assignLabel = { study:"📖 Study", exam:"🎯 Exam", both:"📚 Both", none:"—" };
+  const assignColor = { study:"#1A7A5E", exam:"#B83B2A", both:"#2B5FA6", none:"#8C7B6E" };
 
-  const tabs = [
-    { id:"shared",  label:"📚 Shared Bank",   color:"#2B5FA6", count: questions.length },
-    { id:"study",   label:"📖 Study Bank",     color:"#1A7A5E", count: studyQ.length },
-    { id:"exam",    label:"🎯 Exam Bank",       color:"#B83B2A", count: examQ.length },
-  ];
+  const counts = {
+    study: questions.filter(q => q.assign === "study").length,
+    exam:  questions.filter(q => q.assign === "exam").length,
+    both:  questions.filter(q => q.assign === "both").length,
+    unassigned: questions.filter(q => !q.assign || q.assign === "none").length,
+  };
+
+  const filtered = questions.filter(q => {
+    const secOk = filterSec === "All" || q.section === filterSec;
+    const assignOk = filterAssign === "all" ? true
+      : filterAssign === "unassigned" ? (!q.assign || q.assign === "none")
+      : q.assign === filterAssign;
+    const searchOk = !search || q.question.toLowerCase().includes(search.toLowerCase()) || (q.category||"").toLowerCase().includes(search.toLowerCase());
+    return secOk && assignOk && searchOk;
+  });
+
+  const updateAssign = async (qId, value) => {
+    setSaving(p => ({...p, [qId]: true}));
+    const updated = questions.map(q => q.id === qId ? {...q, assign: value} : q);
+    onChangeQuestions(updated);
+    await api.updateQuestion(qId, { assign: value });
+    setSaving(p => ({...p, [qId]: false}));
+  };
+
+  const bulkAssign = async (value) => {
+    const ids = [...selected];
+    const updated = questions.map(q => ids.includes(q.id) ? {...q, assign: value} : q);
+    onChangeQuestions(updated);
+    await Promise.all(ids.map(id => api.updateQuestion(id, { assign: value })));
+    setSelected(new Set());
+    setBulkMode(false);
+  };
+
+  const toggleSelect = (id) => {
+    setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+
+  const selectAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map(q => q.id)));
+  };
 
   return (
     <div>
-      {/* Bank selector */}
-      <div style={{ display:"flex", gap:8, marginBottom:20 }}>
-        {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setBankTab(t.id)} style={{ flex:1, padding:"11px", borderRadius:12, border:`2px solid ${bankTab===t.id?t.color:"rgba(140,110,80,0.12)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:bankTab===t.id?t.color+"18":"transparent", color:bankTab===t.id?t.color:"#8C7B6E" }}>
-            {t.label}
-            <span style={{ display:"block", fontSize:11, fontWeight:400, marginTop:2, color:bankTab===t.id?t.color:T.ink3 }}>{t.count} questions</span>
-          </button>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div>
+          <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>❓ Question Assignment</h1>
+          <p style={{ color:"#8C7B6E", margin:0, fontSize:13 }}>حدد لكل سؤال وجهته: دراسة، اختبار، أو كليهما</p>
+        </div>
+        <button onClick={()=>{ setBulkMode(!bulkMode); setSelected(new Set()); }} style={{ ...S.btn(bulkMode?"#B83B2A":"#2B5FA6"), padding:"8px 16px", fontSize:13 }}>
+          {bulkMode ? "❌ Cancel Bulk" : "☑️ Bulk Assign"}
+        </button>
+      </div>
+
+      {/* Stats bar */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
+        {[
+          ["📖 Study", counts.study, "#1A7A5E", "study"],
+          ["🎯 Exam",  counts.exam,  "#B83B2A", "exam"],
+          ["📚 Both",  counts.both,  "#2B5FA6", "both"],
+          ["— Unassigned", counts.unassigned, "#8C7B6E", "unassigned"],
+        ].map(([label, count, color, key]) => (
+          <div key={key} onClick={() => setFilterAssign(filterAssign===key?"all":key)}
+            style={{ background:filterAssign===key?color+"18":T.bg2, border:`2px solid ${filterAssign===key?color:"transparent"}`, borderRadius:12, padding:"12px 14px", cursor:"pointer", transition:"all 0.2s" }}>
+            <div style={{ color, fontSize:20, fontWeight:800 }}>{count}</div>
+            <div style={{ color:T.ink3, fontSize:11, marginTop:2 }}>{label}</div>
+          </div>
         ))}
       </div>
-      {bankTab==="shared" && <BankTab label="Shared" accentColor="#2B5FA6" questions={questions} onChange={saveShared} importTitle="Import to Shared Bank (used by both Study & Exam)" />}
-      {bankTab==="study"  && <BankTab label="Study"  accentColor="#1A7A5E" questions={studyQ}    onChange={saveStudy}  importTitle="Import to Study Bank only" />}
-      {bankTab==="exam"   && <BankTab label="Exam"   accentColor="#B83B2A" questions={examQ}     onChange={saveExam}   importTitle="Import to Exam Bank only" />}
+
+      {/* Bulk toolbar */}
+      {bulkMode && selected.size > 0 && (
+        <div style={{ ...S.card, marginBottom:14, background:"rgba(43,95,166,0.06)", border:"1.5px solid rgba(43,95,166,0.25)", display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontWeight:700, fontSize:13, color:"#2B5FA6" }}>{selected.size} selected</span>
+          <span style={{ color:T.ink3, fontSize:12 }}>Assign all to:</span>
+          {[["📖 Study","study","#1A7A5E"],["🎯 Exam","exam","#B83B2A"],["📚 Both","both","#2B5FA6"],["— None","none","#8C7B6E"]].map(([label,val,color])=>(
+            <button key={val} onClick={()=>bulkAssign(val)} style={{ ...S.btn(color), padding:"7px 14px", fontSize:12 }}>{label}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
+        {["All",...SECTIONS].map(s => {
+          const bp = s!=="All" ? BLUEPRINT[s] : null;
+          const on = filterSec === s;
+          return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"4px 11px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?"#2B5FA6":"rgba(140,110,80,0.18)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":on?"#2B5FA620":"transparent", color:on&&bp?bp.color:on?"#2B5FA6":"#8C7B6E" }}>
+            {s==="All"?"All":s==="Social/Behavioral/Administrative Sciences"?"Social/Admin":s.split(" ")[0]}
+          </button>;
+        })}
+      </div>
+      <div style={{ display:"flex", gap:8, marginBottom:14, alignItems:"center" }}>
+        <input style={{ ...S.input, flex:1 }} value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search questions..." />
+        {bulkMode && (
+          <button onClick={selectAll} style={{ ...S.ghost, padding:"10px 14px", fontSize:12, flexShrink:0 }}>
+            {selected.size===filtered.length?"Deselect All":"Select All"}
+          </button>
+        )}
+        <span style={{ color:T.ink3, fontSize:12, flexShrink:0 }}>{filtered.length} / {questions.length}</span>
+      </div>
+
+      {/* Question list */}
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {filtered.length === 0 && <div style={{ ...S.card, textAlign:"center", padding:30, color:T.ink3 }}>No questions found.</div>}
+        {filtered.map(q => {
+          const col = SC[q.section] || { accent:"#2B5FA6" };
+          const assign = q.assign || "none";
+          const isSelected = selected.has(q.id);
+          return (
+            <div key={q.id} onClick={bulkMode ? ()=>toggleSelect(q.id) : undefined}
+              style={{ ...S.card, padding:"12px 15px", border:`1.5px solid ${isSelected?"#2B5FA6":assign!=="none"?assignColor[assign]+"33":T.border}`, background:isSelected?"rgba(43,95,166,0.07)":T.surface, cursor:bulkMode?"pointer":"default", transition:"all 0.15s" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                <div style={{ display:"flex", gap:10, flex:1, minWidth:0 }}>
+                  {bulkMode && (
+                    <input type="checkbox" checked={isSelected} onChange={()=>toggleSelect(q.id)} onClick={e=>e.stopPropagation()}
+                      style={{ marginTop:3, width:16, height:16, flexShrink:0, accentColor:"#2B5FA6" }} />
+                  )}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", gap:5, marginBottom:5, flexWrap:"wrap" }}>
+                      <span style={S.tag(col.accent)}>{q.section==="Social/Behavioral/Administrative Sciences"?"Social":q.section.split(" ")[0]}</span>
+                      <span style={S.tag("#8C7B6E")}>{q.category}</span>
+                      <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
+                      {assign !== "none" && <span style={S.tag(assignColor[assign])}>{assignLabel[assign]}</span>}
+                    </div>
+                    <p style={{ color:T.ink, fontSize:13, margin:0, lineHeight:1.5, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{q.question}</p>
+                  </div>
+                </div>
+                {!bulkMode && (
+                  <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                    {[["📖","study","#1A7A5E"],["🎯","exam","#B83B2A"],["📚","both","#2B5FA6"]].map(([icon,val,color])=>(
+                      <button key={val} onClick={()=>updateAssign(q.id, assign===val?"none":val)}
+                        style={{ padding:"6px 10px", borderRadius:8, border:`1.5px solid ${assign===val?color:"rgba(140,110,80,0.2)"}`, cursor:"pointer", fontSize:12, fontWeight:700, background:assign===val?color:"transparent", color:assign===val?"#fff":color, transition:"all 0.15s", opacity:saving[q.id]?0.6:1 }}>
+                        {saving[q.id]?"⏳":icon}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -714,7 +833,7 @@ function AdminDashboard({ user, onLogout }) {
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   useEffect(() => {
-    api.getQuestions().then(qs => { setQuestions(qs); });
+    api.getQuestions().then(qs => { setQuestions(qs); DB.saveQuestions(qs); });
   }, []);
 
   return (
@@ -759,10 +878,10 @@ function AdminDashboard({ user, onLogout }) {
 
 // ===================== STUDENT =====================
 function StudentDashboard({ user, onLogout }) {
-  const [screen, setScreen] = useState("home");
+  const [screen, setScreen] = useState("home"); // home | study | exam | results
   const [examQ, setExamQ] = useState([]);
   const [examA, setExamA] = useState({});
-  const [mode, setMode] = useState("exam");
+  const [mode, setMode] = useState("exam"); // "study" | "exam"
   const [myResults, setMyResults] = useState(DB.getResults().filter(r=>r.userId===user.id));
   const [questions, setQuestions] = useState(DB.getQuestions());
   const [loadingQ, setLoadingQ] = useState(true);
@@ -775,13 +894,10 @@ function StudentDashboard({ user, onLogout }) {
 
   const startSession = (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
-    // Use specific bank if available, fall back to shared bank
-    const studyBank = DB.getStudyQuestions();
-    const examBank = DB.getExamQuestions();
-    const pool = sessionMode === "study"
-      ? (studyBank.length > 0 ? studyBank : questions)
-      : (examBank.length > 0 ? examBank : questions);
-    const q = buildExam(pool, settings);
+    // Filter by admin assignment
+    const pool = questions.filter(q => q.assign === sessionMode || q.assign === "both");
+    const fallback = pool.length >= 10 ? pool : questions;
+    const q = buildExam(fallback, settings);
     setMode(sessionMode);
     setExamQ(q);
     setScreen(sessionMode);
@@ -798,8 +914,8 @@ function StudentDashboard({ user, onLogout }) {
     setScreen("results");
   };
 
+  if (loadingQ && questions.length === 0) return <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}><div style={{ fontSize:36 }}>⏳</div><div style={{ color:T.ink2, fontWeight:700 }}>جاري تحميل الأسئلة...</div></div>;
   if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} allQuestions={questions} />;
-  if (loadingQ) return <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}><div style={{ fontSize:36 }}>⏳</div><div style={{ color:T.ink2, fontWeight:700 }}>جاري تحميل الأسئلة من قاعدة البيانات...</div><div style={{ color:T.ink3, fontSize:13 }}>{questions.length > 0 ? `${questions.length} سؤال محمّل من الذاكرة` : "يرجى الانتظار"}</div></div>;
   if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} onHome={()=>setScreen("home")} />;
   if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} />;
   if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
