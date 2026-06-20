@@ -41,12 +41,19 @@ const api = {
     } catch (e) { console.error(e); return []; }
   },
   uploadToBank: async (bank, questions) => {
-    const res = await fetch(`${API_URL}/${bank}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(questions)
-    });
-    return await res.json();
+    const BATCH = 500;
+    let totalUploaded = 0;
+    for (let i = 0; i < questions.length; i += BATCH) {
+      const chunk = questions.slice(i, i + BATCH);
+      const res = await fetch(`${API_URL}/${bank}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chunk)
+      });
+      const data = await res.json();
+      totalUploaded += data.uploaded || chunk.length;
+    }
+    return { uploaded: totalUploaded };
   },
   clearBank: async (bank) => {
     const res = await fetch(`${API_URL}/${bank}`, { method: "DELETE" });
