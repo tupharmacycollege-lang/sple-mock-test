@@ -3,14 +3,50 @@ import * as XLSX from "xlsx";
 
 const API_URL = "https://y0ww5f6rnf.execute-api.eu-north-1.amazonaws.com/prod";
 
+// ===================== API HELPERS =====================
+const api = {
+  getQuestions: async () => {
+    try {
+      const cached = localStorage.getItem("sple_questions_cache");
+      const cacheTime = localStorage.getItem("sple_questions_cache_time");
+      // Use cache if less than 10 minutes old
+      if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 600000) {
+        return JSON.parse(cached);
+      }
+      const res = await fetch(`${API_URL}/questions`);
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json();
+      const questions = data.filter(q => q.id !== "config");
+      localStorage.setItem("sple_questions_cache", JSON.stringify(questions));
+      localStorage.setItem("sple_questions_cache_time", Date.now().toString());
+      return questions;
+    } catch (e) {
+      console.error("Failed to fetch questions from API:", e);
+      const cached = localStorage.getItem("sple_questions_cache");
+      return cached ? JSON.parse(cached) : DEFAULT_QUESTIONS;
+    }
+  },
+  saveResult: async (result) => {
+    try {
+      await fetch(`${API_URL}/results`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result)
+      });
+    } catch (e) {
+      console.error("Failed to save result:", e);
+    }
+  }
+};
+
 const DB = {
   getUsers: () => JSON.parse(localStorage.getItem("sple_users") || "[]"),
   saveUsers: (u) => localStorage.setItem("sple_users", JSON.stringify(u)),
   getResults: () => JSON.parse(localStorage.getItem("sple_results") || "[]"),
   saveResults: (r) => localStorage.setItem("sple_results", JSON.stringify(r)),
-  // Shared bank (legacy + manual)
-  getQuestions: () => { const s = localStorage.getItem("sple_questions"); return s ? JSON.parse(s) : DEFAULT_QUESTIONS; },
-  saveQuestions: (q) => localStorage.setItem("sple_questions", JSON.stringify(q)),
+  // Shared bank (legacy + manual) — now loads from API cache
+  getQuestions: () => { const s = localStorage.getItem("sple_questions_cache"); return s ? JSON.parse(s) : DEFAULT_QUESTIONS; },
+  saveQuestions: (q) => localStorage.setItem("sple_questions_cache", JSON.stringify(q)),
   // Study-only bank
   getStudyQuestions: () => { const s = localStorage.getItem("sple_study_questions"); return s ? JSON.parse(s) : []; },
   saveStudyQuestions: (q) => localStorage.setItem("sple_study_questions", JSON.stringify(q)),
@@ -675,8 +711,11 @@ function AdminDashboard({ user, onLogout }) {
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
   const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
-
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
+
+  useEffect(() => {
+    api.getQuestions().then(qs => { setQuestions(qs); });
+  }, []);
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex" }}>
@@ -720,14 +759,19 @@ function AdminDashboard({ user, onLogout }) {
 
 // ===================== STUDENT =====================
 function StudentDashboard({ user, onLogout }) {
-  const [screen, setScreen] = useState("home"); // home | study | exam | results
+  const [screen, setScreen] = useState("home");
   const [examQ, setExamQ] = useState([]);
   const [examA, setExamA] = useState({});
-  const [mode, setMode] = useState("exam"); // "study" | "exam"
+  const [mode, setMode] = useState("exam");
   const [myResults, setMyResults] = useState(DB.getResults().filter(r=>r.userId===user.id));
-  const questions = DB.getQuestions();
+  const [questions, setQuestions] = useState(DB.getQuestions());
+  const [loadingQ, setLoadingQ] = useState(true);
   const studySettings = DB.getStudySettings();
   const examSettings = DB.getExamSettings();
+
+  useEffect(() => {
+    api.getQuestions().then(qs => { setQuestions(qs); setLoadingQ(false); });
+  }, []);
 
   const startSession = (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
@@ -755,6 +799,7 @@ function StudentDashboard({ user, onLogout }) {
   };
 
   if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} allQuestions={questions} />;
+  if (loadingQ) return <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}><div style={{ fontSize:36 }}>⏳</div><div style={{ color:T.ink2, fontWeight:700 }}>جاري تحميل الأسئلة من قاعدة البيانات...</div><div style={{ color:T.ink3, fontSize:13 }}>{questions.length > 0 ? `${questions.length} سؤال محمّل من الذاكرة` : "يرجى الانتظار"}</div></div>;
   if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} onHome={()=>setScreen("home")} />;
   if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} />;
   if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
