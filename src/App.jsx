@@ -12,6 +12,8 @@ const api = {
       const data = await res.json();
       const questions = Array.isArray(data) ? data.filter(q => q.id !== "config") : [];
       if (questions.length > 0) {
+        // Merge: prefer assign from DynamoDB (already stored there via PATCH)
+        // DynamoDB is source of truth for assign field
         localStorage.setItem("sple_questions_cache", JSON.stringify(questions));
         localStorage.setItem("sple_questions_cache_time", Date.now().toString());
       }
@@ -717,6 +719,8 @@ function AdminQuestions({ questions, onChangeQuestions }) {
     setSaving(p => ({...p, [qId]: true}));
     const updated = questions.map(q => q.id === qId ? {...q, assign: value} : q);
     onChangeQuestions(updated);
+    // Update cache immediately so it persists on reload
+    localStorage.setItem("sple_questions_cache", JSON.stringify(updated));
     await api.updateQuestion(qId, { assign: value });
     setSaving(p => ({...p, [qId]: false}));
   };
@@ -725,6 +729,8 @@ function AdminQuestions({ questions, onChangeQuestions }) {
     const ids = [...selected];
     const updated = questions.map(q => ids.includes(q.id) ? {...q, assign: value} : q);
     onChangeQuestions(updated);
+    // Update cache immediately
+    localStorage.setItem("sple_questions_cache", JSON.stringify(updated));
     await Promise.all(ids.map(id => api.updateQuestion(id, { assign: value })));
     setSelected(new Set());
     setBulkMode(false);
