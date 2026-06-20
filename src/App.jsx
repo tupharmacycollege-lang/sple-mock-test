@@ -7,18 +7,15 @@ const API_URL = "https://y0ww5f6rnf.execute-api.eu-north-1.amazonaws.com/prod";
 const api = {
   getQuestions: async () => {
     try {
-      const cached = localStorage.getItem("sple_questions_cache");
-      const cacheTime = localStorage.getItem("sple_questions_cache_time");
-      if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 600000) {
-        return JSON.parse(cached);
-      }
       const res = await fetch(`${API_URL}/questions`);
-      if (!res.ok) throw new Error("API error");
+      if (!res.ok) throw new Error("API error " + res.status);
       const data = await res.json();
-      const questions = data.filter(q => q.id !== "config");
-      localStorage.setItem("sple_questions_cache", JSON.stringify(questions));
-      localStorage.setItem("sple_questions_cache_time", Date.now().toString());
-      return questions;
+      const questions = Array.isArray(data) ? data.filter(q => q.id !== "config") : [];
+      if (questions.length > 0) {
+        localStorage.setItem("sple_questions_cache", JSON.stringify(questions));
+        localStorage.setItem("sple_questions_cache_time", Date.now().toString());
+      }
+      return questions.length > 0 ? questions : DEFAULT_QUESTIONS;
     } catch (e) {
       console.error("Failed to fetch questions from API:", e);
       const cached = localStorage.getItem("sple_questions_cache");
@@ -544,6 +541,17 @@ function AdminQuestions({ questions, onChangeQuestions }) {
     else setSelected(new Set(filtered.map(q => q.id)));
   };
 
+  if (questions.length <= 8 && questions[0]?.id === "q1") {
+    return (
+      <div style={{ textAlign:"center", padding:60 }}>
+        <div style={{ fontSize:40, marginBottom:16 }}>⏳</div>
+        <div style={{ fontWeight:700, fontSize:18, marginBottom:8 }}>جاري تحميل الأسئلة من DynamoDB...</div>
+        <div style={{ color:"#8C7B6E", fontSize:13, marginBottom:24 }}>يتم جلب 1,958 سؤال من قاعدة البيانات</div>
+        <button onClick={()=>{ localStorage.removeItem("sple_questions_cache"); localStorage.removeItem("sple_questions_cache_time"); window.location.reload(); }} style={{ ...S.btn("#2B5FA6"), padding:"10px 24px" }}>🔄 إعادة التحميل</button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
@@ -832,8 +840,15 @@ function AdminDashboard({ user, onLogout }) {
   const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
+  const [loadingQ, setLoadingQ] = useState(true);
   useEffect(() => {
-    api.getQuestions().then(qs => { setQuestions(qs); DB.saveQuestions(qs); });
+    // Force fresh fetch from DynamoDB (bypass cache)
+    localStorage.removeItem("sple_questions_cache_time");
+    api.getQuestions().then(qs => { 
+      setQuestions(qs); 
+      DB.saveQuestions(qs); 
+      setLoadingQ(false);
+    });
   }, []);
 
   return (
@@ -867,7 +882,10 @@ function AdminDashboard({ user, onLogout }) {
             <QuestionStats questions={questions} />
           </div>
         )}
-        {tab==="questions" && <AdminQuestions questions={questions} onChangeQuestions={saveQ} />}
+        {tab==="questions" && (loadingQ 
+          ? <div style={{ textAlign:"center", padding:60 }}><div style={{ fontSize:40 }}>⏳</div><div style={{ fontWeight:700, marginTop:12 }}>جاري تحميل الأسئلة من DynamoDB...</div><div style={{ color:"#8C7B6E", fontSize:13, marginTop:8 }}>يتم جلب 1,958 سؤال</div></div>
+          : <AdminQuestions questions={questions} onChangeQuestions={saveQ} />
+        )}
         {tab==="students" && <AdminStudents users={users} onChange={saveU} />}
         {tab==="reports" && <AdminReports users={users} results={results} />}
         {tab==="settings" && <AdminExamSettings />}
