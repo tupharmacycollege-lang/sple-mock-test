@@ -1386,14 +1386,14 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
             {l.blocks.map((block, i) => renderBlock(block, i))}
             {/* Navigation — Back right, Next left, centered */}
             <div style={{ marginTop:32, display:"flex", justifyContent:"center", alignItems:"center", gap:16 }}>
+              <button onClick={goNextLesson} style={{ ...S.btn(color), padding:"12px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
+                {isLastLesson ? "Start Practice Questions ✅" : `← Next`}
+              </button>
+              <div style={{ color:T.ink3, fontSize:12, fontFamily:"system-ui,sans-serif" }}>{lessonIdx+1} / {lessons.length}</div>
               <button
                 onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(lessonIdx-1); setActiveLesson(lessons[lessonIdx-1]); setSectionPhase("lesson"); }}}
                 style={{ ...S.ghost, padding:"12px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
-                ← {lessonIdx===0 ? "Sections" : "Previous"}
-              </button>
-              <div style={{ color:T.ink3, fontSize:12, fontFamily:"system-ui,sans-serif" }}>{lessonIdx+1} / {lessons.length}</div>
-              <button onClick={goNextLesson} style={{ ...S.btn(color), padding:"12px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
-                {isLastLesson ? "Start Practice Questions ✅" : `Next →`}
+                {lessonIdx===0 ? "Sections →" : "Previous →"}
               </button>
             </div>
           </div>
