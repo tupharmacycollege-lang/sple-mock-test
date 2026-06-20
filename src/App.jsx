@@ -789,8 +789,8 @@ function AdminQuestions({ questions, onChangeQuestions }) {
           const isSelected = selected.has(q.id);
           return (
             <div key={q.id} onClick={bulkMode ? ()=>toggleSelect(q.id) : undefined}
-              style={{ ...S.card, padding:"12px 15px", border:`1.5px solid ${isSelected?"#2B5FA6":assign!=="none"?assignColor[assign]+"33":T.border}`, background:isSelected?"rgba(43,95,166,0.07)":T.surface, cursor:bulkMode?"pointer":"default", transition:"all 0.15s" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+              style={{ ...S.card, padding:"12px 15px", border:`2px solid ${isSelected?"#2B5FA6":assign!=="none"?assignColor[assign]+"55":T.border}`, background:isSelected?"rgba(43,95,166,0.07)":assign!=="none"?assignColor[assign]+"06":T.surface, cursor:bulkMode?"pointer":"default", transition:"all 0.15s" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
                 <div style={{ display:"flex", gap:10, flex:1, minWidth:0 }}>
                   {bulkMode && (
                     <input type="checkbox" checked={isSelected} onChange={()=>toggleSelect(q.id)} onClick={e=>e.stopPropagation()}
@@ -807,11 +807,11 @@ function AdminQuestions({ questions, onChangeQuestions }) {
                   </div>
                 </div>
                 {!bulkMode && (
-                  <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                    {[["📚","study","#1A7A5E","دورة"],["🎯","exam","#B83B2A","اختبار"],["📖","both","#2B5FA6","كليهما"]].map(([icon,val,color,tip])=>(
+                  <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
+                    {[["📚","study","#1A7A5E","دورة"],["🎯","exam","#B83B2A","اختبار"],["📖","both","#2B5FA6","كليهما"]].map(([icon,val,color,label])=>(
                       <button key={val} onClick={()=>updateAssign(q.id, assign===val?"none":val)}
-                        style={{ padding:"6px 10px", borderRadius:8, border:`1.5px solid ${assign===val?color:"rgba(140,110,80,0.2)"}`, cursor:"pointer", fontSize:12, fontWeight:700, background:assign===val?color:"transparent", color:assign===val?"#fff":color, transition:"all 0.15s", opacity:saving[q.id]?0.6:1 }}>
-                        {saving[q.id]?"⏳":icon}
+                        style={{ padding:"5px 12px", borderRadius:8, border:`1.5px solid ${assign===val?color:"rgba(140,110,80,0.25)"}`, cursor:"pointer", fontSize:11, fontWeight:700, background:assign===val?color:assign==="none"?"rgba(140,110,80,0.05)":"transparent", color:assign===val?"#fff":color, transition:"all 0.15s", opacity:saving[q.id]?0.5:1, whiteSpace:"nowrap", minWidth:80, textAlign:"center" }}>
+                        {saving[q.id] ? "⏳" : `${icon} ${label}`}
                       </button>
                     ))}
                   </div>
