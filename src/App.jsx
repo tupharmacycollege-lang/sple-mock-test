@@ -319,8 +319,15 @@ function ExcelImportCard({ title, accentColor, onImport, onReplace }) {
   const [preview, setPreview] = useState([]);
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
-  const [mode, setMode] = useState("replace"); // "replace" | "add"
+  const [mode, setMode] = useState("add"); // "replace" | "add"
+  const [assignTo, setAssignTo] = useState("none"); // "study" | "exam" | "both" | "none"
   const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
+  const assignOpts = [
+    { val:"study", label:"📚 دورة المراجعة", color:"#1A7A5E" },
+    { val:"exam",  label:"🎯 الاختبار الرسمي", color:"#B83B2A" },
+    { val:"both",  label:"📖 كليهما",          color:"#2B5FA6" },
+    { val:"none",  label:"— بدون تحديد",       color:"#8C7B6E" },
+  ];
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
@@ -336,9 +343,11 @@ function ExcelImportCard({ title, accentColor, onImport, onReplace }) {
   };
 
   const confirm = () => {
-    if (mode === "replace") onReplace(preview);
-    else onImport(preview);
-    setSuccess(`✅ ${mode === "replace" ? "Replaced with" : "Added"} ${preview.length} questions!`);
+    const tagged = preview.map(q => ({ ...q, assign: assignTo === "none" ? undefined : assignTo }));
+    if (mode === "replace") onReplace(tagged);
+    else onImport(tagged);
+    const dest = assignOpts.find(o=>o.val===assignTo)?.label || "بدون تحديد";
+    setSuccess(`✅ تم ${mode === "replace" ? "استبدال" : "إضافة"} ${preview.length} سؤال → ${dest}`);
     setPreview([]);
   };
 
@@ -347,33 +356,53 @@ function ExcelImportCard({ title, accentColor, onImport, onReplace }) {
       <div style={{ fontWeight:700, fontSize:14, marginBottom:12, color:accentColor }}>📥 {title}</div>
 
       {/* Replace / Add toggle */}
-      <div style={{ display:"flex", background:T.bg2, borderRadius:8, padding:3, marginBottom:12, border:`1px solid ${T.border}` }}>
-        <button onClick={()=>setMode("replace")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:mode==="replace"?accentColor:"transparent", color:mode==="replace"?"#fff":T.ink3, transition:"all 0.2s" }}>
-          🔄 Replace All
-        </button>
+      <div style={{ display:"flex", background:T.bg2, borderRadius:8, padding:3, marginBottom:14, border:`1px solid ${T.border}` }}>
         <button onClick={()=>setMode("add")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:mode==="add"?accentColor:"transparent", color:mode==="add"?"#fff":T.ink3, transition:"all 0.2s" }}>
-          ➕ Add to Existing
+          ➕ إضافة للموجود
+        </button>
+        <button onClick={()=>setMode("replace")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:mode==="replace"?"#B83B2A":"transparent", color:mode==="replace"?"#fff":T.ink3, transition:"all 0.2s" }}>
+          🔄 استبدال الكل
         </button>
       </div>
 
+      {/* Assign destination */}
+      <div style={{ marginBottom:14 }}>
+        <div style={{ color:T.ink3, fontSize:11, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.05em" }}>وجهة الأسئلة المرفوعة:</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+          {assignOpts.map(o => (
+            <button key={o.val} onClick={()=>setAssignTo(o.val)}
+              style={{ padding:"9px 10px", borderRadius:9, border:`2px solid ${assignTo===o.val?o.color:"rgba(140,110,80,0.18)"}`, cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:assignTo===o.val?o.color+"18":"transparent", color:assignTo===o.val?o.color:T.ink3, transition:"all 0.2s", textAlign:"center" }}>
+              {o.label}
+              {assignTo===o.val && <span style={{ marginRight:6 }}>✓</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {mode==="replace" && (
-        <div style={{ background:"rgba(196,122,30,0.08)", border:"1px solid rgba(196,122,30,0.3)", borderRadius:7, padding:"7px 12px", marginBottom:10, fontSize:12, color:T.ink2, fontFamily:"system-ui,sans-serif" }}>
-          ⚠️ Replace All will delete existing questions and replace with the new file.
+        <div style={{ background:"rgba(196,122,30,0.08)", border:"1px solid rgba(196,122,30,0.3)", borderRadius:7, padding:"7px 12px", marginBottom:10, fontSize:12, color:T.ink2 }}>
+          ⚠️ سيتم حذف جميع الأسئلة الحالية واستبدالها بالملف الجديد
         </div>
       )}
 
       <div style={{ display:"flex", gap:10, marginBottom:10, alignItems:"center", flexWrap:"wrap" }}>
         <label style={{ ...S.btn(accentColor), padding:"9px 16px", cursor:"pointer", fontSize:13, flexShrink:0 }}>
-          {importing ? "⏳ Reading..." : "📂 Choose .xlsx"}
+          {importing ? "⏳ جاري القراءة..." : "📂 اختر ملف Excel"}
           <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display:"none" }} />
         </label>
-        <span style={{ color:"#8C7B6E", fontSize:11 }}>Columns: section, category, difficulty, question, option_a…d, correct_answer (0-3), explanation</span>
+        <span style={{ color:"#8C7B6E", fontSize:11 }}>الأعمدة: section, category, difficulty, question, option_a…d, correct_answer (0-3), explanation</span>
       </div>
+
       {err && <div style={{ background:"rgba(184,59,42,0.08)", border:"1px solid rgba(184,59,42,0.30)", borderRadius:8, padding:"9px 12px", color:"#B83B2A", fontSize:13, marginBottom:8 }}>⚠️ {err}</div>}
       {success && <div style={{ background:"rgba(26,122,94,0.10)", border:"1px solid rgba(26,122,94,0.35)", borderRadius:8, padding:"9px 12px", color:"#1A7A5E", fontSize:13, marginBottom:8 }}>{success}</div>}
+
       {preview.length > 0 && (
         <div>
-          <div style={{ fontWeight:700, marginBottom:8, color:accentColor, fontSize:13 }}>Preview: {preview.length} questions · Mode: <span style={{ color:mode==="replace"?"#B83B2A":"#1A7A5E" }}>{mode==="replace"?"Replace All":"Add to Existing"}</span></div>
+          <div style={{ fontWeight:700, marginBottom:8, color:accentColor, fontSize:13 }}>
+            معاينة: {preview.length} سؤال ·
+            <span style={{ color:mode==="replace"?"#B83B2A":"#1A7A5E", marginRight:6 }}>{mode==="replace"?"استبدال":"إضافة"}</span>→
+            <span style={{ color:assignOpts.find(o=>o.val===assignTo)?.color, marginRight:6 }}>{assignOpts.find(o=>o.val===assignTo)?.label}</span>
+          </div>
           <div style={{ maxHeight:160, overflowY:"auto", marginBottom:10, display:"flex", flexDirection:"column", gap:4 }}>
             {preview.slice(0,4).map((q,i) => (
               <div key={i} style={{ background:T.bg2, borderRadius:8, padding:"7px 10px", fontSize:12 }}>
@@ -384,13 +413,13 @@ function ExcelImportCard({ title, accentColor, onImport, onReplace }) {
                 <div style={{ color:T.ink }}>{q.question.substring(0,85)}{q.question.length>85?"...":""}</div>
               </div>
             ))}
-            {preview.length > 4 && <div style={{ color:"#8C7B6E", fontSize:11, textAlign:"center" }}>+{preview.length-4} more…</div>}
+            {preview.length > 4 && <div style={{ color:"#8C7B6E", fontSize:11, textAlign:"center" }}>+{preview.length-4} سؤال إضافي…</div>}
           </div>
           <div style={{ display:"flex", gap:8 }}>
             <button onClick={confirm} style={{ ...S.btn(mode==="replace"?"#B83B2A":accentColor), flex:1, padding:10 }}>
-              {mode==="replace" ? `🔄 Replace with ${preview.length} Questions` : `➕ Add ${preview.length} Questions`}
+              {mode==="replace" ? `🔄 استبدال بـ ${preview.length} سؤال` : `➕ إضافة ${preview.length} سؤال`}
             </button>
-            <button onClick={()=>setPreview([])} style={{ ...S.ghost, padding:10 }}>Cancel</button>
+            <button onClick={()=>setPreview([])} style={{ ...S.ghost, padding:10 }}>إلغاء</button>
           </div>
         </div>
       )}
