@@ -1469,17 +1469,17 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
             </div>
             {/* Fixed Bottom Nav — Back right, Next left */}
             <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"14px 24px", display:"flex", justifyContent:"center", alignItems:"center", gap:20, boxShadow:"0 -4px 16px rgba(60,40,20,0.08)" }}>
-              <button onClick={goPrev} disabled={cur===0}
-                style={{ ...S.ghost, padding:"11px 28px", fontSize:14, opacity:cur===0?0.35:1, display:"flex", alignItems:"center", gap:8 }}>
-                ← Back
-              </button>
-              <span style={{ color:T.ink3, fontSize:13, fontFamily:"system-ui,sans-serif", minWidth:60, textAlign:"center" }}>{cur+1} / {sectionQuestions.length}</span>
               {answered
                 ? <button onClick={goNext} style={{ ...S.btn(color), padding:"11px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
-                    {cur<sectionQuestions.length-1 ? "Next →" : "✅ Done"}
+                    {cur<sectionQuestions.length-1 ? "→ Next" : "✅ Done"}
                   </button>
-                : <button disabled style={{ ...S.btn(T.bg3), padding:"11px 28px", fontSize:14, opacity:0.4, color:T.ink3 }}>Next →</button>
+                : <button disabled style={{ ...S.btn(T.bg3), padding:"11px 28px", fontSize:14, opacity:0.4, color:T.ink3 }}>→ Next</button>
               }
+              <span style={{ color:T.ink3, fontSize:13, fontFamily:"system-ui,sans-serif", minWidth:60, textAlign:"center" }}>{cur+1} / {sectionQuestions.length}</span>
+              <button onClick={goPrev} disabled={cur===0}
+                style={{ ...S.ghost, padding:"11px 28px", fontSize:14, opacity:cur===0?0.35:1, display:"flex", alignItems:"center", gap:8 }}>
+                Back →
+              </button>
             </div>
           </div>
         );
