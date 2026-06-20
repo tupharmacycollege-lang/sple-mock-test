@@ -1348,11 +1348,13 @@ difficulty must be one of: سهل, متوسط, صعب`;
 
   // ── PHASE: LIST ─────────────────────────────────────────────
   if (phase === "list") return (
-    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
-      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 24px", display:"flex", alignItems:"center", gap:12 }}>
-        <button onClick={onBack} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Dashboard</button>
-        <div style={{ fontWeight:800, fontSize:16 }}>📚 Study Materials</div>
-        <div style={{ marginLeft:"auto", color:"#8C7B6E", fontSize:12 }}>{STUDY_LESSONS.length} Lessons</div>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:T.ink }}>
+      <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"14px 24px", display:"flex", alignItems:"center", gap:12, boxShadow:T.shadow }}>
+        <button onClick={onBack} style={{ ...S.btn(T.accent), padding:"9px 18px", fontSize:13, display:"flex", alignItems:"center", gap:6 }}>
+          ← Dashboard
+        </button>
+        <div style={{ fontWeight:800, fontSize:16, color:T.ink }}>📚 Study Materials</div>
+        <div style={{ marginLeft:"auto", color:T.ink3, fontSize:12 }}>{STUDY_LESSONS.length} Lessons</div>
       </div>
       <div style={{ maxWidth:720, margin:"0 auto", padding:24 }}>
         <div style={{ ...S.card, marginBottom:24, background:"rgba(16,185,129,0.06)", border:"1px solid rgba(16,185,129,0.3)" }}>
