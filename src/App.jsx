@@ -687,174 +687,261 @@ function BankManager() {
   );
 }
 
-function AdminQuestions({ questions, onChangeQuestions }) {
-  const [search, setSearch] = useState("");
-  const [filterSec, setFilterSec] = useState("All");
-  const [filterAssign, setFilterAssign] = useState("all");
-  const [saving, setSaving] = useState({});
-  const [bulkMode, setBulkMode] = useState(false);
-  const [selected, setSelected] = useState(new Set());
-  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
-
-  const assignLabel = { study:"📚 دورة", exam:"🎯 اختبار", both:"📖 كليهما", none:"—" };
-  const assignColor = { study:"#1A7A5E", exam:"#B83B2A", both:"#2B5FA6", none:"#8C7B6E" };
-
-  const counts = {
-    study: questions.filter(q => q.assign === "study").length,
-    exam:  questions.filter(q => q.assign === "exam").length,
-    both:  questions.filter(q => q.assign === "both").length,
-    unassigned: questions.filter(q => !q.assign || q.assign === "none").length,
-  };
-
-  const filtered = questions.filter(q => {
-    const secOk = filterSec === "All" || q.section === filterSec;
-    const assignOk = filterAssign === "all" ? true
-      : filterAssign === "unassigned" ? (!q.assign || q.assign === "none")
-      : q.assign === filterAssign;
-    const searchOk = !search || q.question.toLowerCase().includes(search.toLowerCase()) || (q.category||"").toLowerCase().includes(search.toLowerCase());
-    return secOk && assignOk && searchOk;
-  });
-
-  const updateAssign = async (qId, value) => {
-    setSaving(p => ({...p, [qId]: true}));
-    const updated = questions.map(q => q.id === qId ? {...q, assign: value} : q);
-    onChangeQuestions(updated);
-    // Update cache immediately so it persists on reload
-    localStorage.setItem("sple_questions_cache", JSON.stringify(updated));
-    await api.updateQuestion(qId, { assign: value });
-    setSaving(p => ({...p, [qId]: false}));
-  };
-
-  const bulkAssign = async (value) => {
-    const ids = [...selected];
-    const updated = questions.map(q => ids.includes(q.id) ? {...q, assign: value} : q);
-    onChangeQuestions(updated);
-    // Update cache immediately
-    localStorage.setItem("sple_questions_cache", JSON.stringify(updated));
-    await Promise.all(ids.map(id => api.updateQuestion(id, { assign: value })));
-    setSelected(new Set());
-    setBulkMode(false);
-  };
-
-  const toggleSelect = (id) => {
-    setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  };
-
-  const selectAll = () => {
-    if (selected.size === filtered.length) setSelected(new Set());
-    else setSelected(new Set(filtered.map(q => q.id)));
-  };
-
-  if (questions.length <= 8 && questions[0]?.id === "q1") {
-    return (
-      <div style={{ textAlign:"center", padding:60 }}>
-        <div style={{ fontSize:40, marginBottom:16 }}>⏳</div>
-        <div style={{ fontWeight:700, fontSize:18, marginBottom:8 }}>جاري تحميل الأسئلة من DynamoDB...</div>
-        <div style={{ color:"#8C7B6E", fontSize:13, marginBottom:24 }}>يتم جلب 1,958 سؤال من قاعدة البيانات</div>
-        <button onClick={()=>{ localStorage.removeItem("sple_questions_cache"); localStorage.removeItem("sple_questions_cache_time"); window.location.reload(); }} style={{ ...S.btn("#2B5FA6"), padding:"10px 24px" }}>🔄 إعادة التحميل</button>
-      </div>
-    );
-  }
+function BankSelector({ label, icon, color, bankKey, allBanks, onSelectBank }) {
+  const [open, setOpen] = useState(false);
+  const active = allBanks.find(b => b.key === bankKey);
 
   return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
-        <div>
-          <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>❓ Question Assignment</h1>
-          <p style={{ color:"#8C7B6E", margin:0, fontSize:13 }}>📚 دورة المراجعة &nbsp;|&nbsp; 🎯 الاختبار الرسمي &nbsp;|&nbsp; 📖 كليهما</p>
+    <div style={{ ...S.card, border:`2px solid ${color}44`, background:color+"06", marginBottom:12 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:28 }}>{icon}</span>
+          <div>
+            <div style={{ fontWeight:800, fontSize:15, color }}>{label}</div>
+            <div style={{ color:T.ink3, fontSize:12, marginTop:2 }}>
+              البنك الفعال: {active ? <span style={{ color, fontWeight:700 }}>✅ {active.name} ({active.count} سؤال)</span> : <span style={{ color:"#8C7B6E" }}>— غير محدد</span>}
+            </div>
+          </div>
         </div>
-        <button onClick={()=>{ setBulkMode(!bulkMode); setSelected(new Set()); }} style={{ ...S.btn(bulkMode?"#B83B2A":"#2B5FA6"), padding:"8px 16px", fontSize:13 }}>
-          {bulkMode ? "❌ Cancel Bulk" : "☑️ Bulk Assign"}
+        <button onClick={()=>setOpen(!open)} style={{ ...S.btn(color), padding:"8px 16px", fontSize:13 }}>
+          {open ? "إغلاق ▲" : "تغيير البنك ▼"}
         </button>
       </div>
 
-      {/* Stats bar */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
-        {[
-          ["📚 دورة",      counts.study,      "#1A7A5E", "study"],
-          ["🎯 اختبار",     counts.exam,       "#B83B2A", "exam"],
-          ["📖 كليهما",     counts.both,       "#2B5FA6", "both"],
-          ["— غير محدد",   counts.unassigned,  "#8C7B6E", "unassigned"],
-        ].map(([label, count, color, key]) => (
-          <div key={key} onClick={() => setFilterAssign(filterAssign===key?"all":key)}
-            style={{ background:filterAssign===key?color+"18":T.bg2, border:`2px solid ${filterAssign===key?color:"transparent"}`, borderRadius:12, padding:"12px 14px", cursor:"pointer", transition:"all 0.2s" }}>
-            <div style={{ color, fontSize:20, fontWeight:800 }}>{count}</div>
-            <div style={{ color:T.ink3, fontSize:11, marginTop:2 }}>{label}</div>
+      {open && (
+        <div style={{ marginTop:14, borderTop:`1px solid ${color}22`, paddingTop:14 }}>
+          <div style={{ color:T.ink3, fontSize:12, fontWeight:700, marginBottom:10 }}>اختر البنك لهذا المسار:</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {allBanks.map(b => (
+              <div key={b.key} onClick={()=>{ onSelectBank(b.key); setOpen(false); }}
+                style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", borderRadius:10, border:`1.5px solid ${bankKey===b.key?color:"rgba(140,110,80,0.2)"}`, background:bankKey===b.key?color+"12":"transparent", cursor:"pointer" }}>
+                <div>
+                  <div style={{ fontWeight:700, color:bankKey===b.key?color:T.ink }}>{b.name}</div>
+                  <div style={{ color:T.ink3, fontSize:12 }}>{b.count} سؤال · {b.table}</div>
+                </div>
+                {bankKey===b.key && <span style={{ color, fontWeight:800, fontSize:18 }}>✓</span>}
+              </div>
+            ))}
+            <div onClick={()=>{ onSelectBank(null); setOpen(false); }}
+              style={{ padding:"10px 14px", borderRadius:10, border:`1.5px solid ${!bankKey?"#B83B2A":"rgba(140,110,80,0.2)"}`, background:!bankKey?"rgba(184,59,42,0.06)":"transparent", cursor:"pointer", color:!bankKey?"#B83B2A":T.ink3, fontWeight:600, fontSize:13 }}>
+              — إلغاء التحديد
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Bulk toolbar */}
-      {bulkMode && selected.size > 0 && (
-        <div style={{ ...S.card, marginBottom:14, background:"rgba(43,95,166,0.06)", border:"1.5px solid rgba(43,95,166,0.25)", display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
-          <span style={{ fontWeight:700, fontSize:13, color:"#2B5FA6" }}>{selected.size} selected</span>
-          <span style={{ color:T.ink3, fontSize:12 }}>Assign all to:</span>
-          {[["📚 دورة","study","#1A7A5E"],["🎯 اختبار","exam","#B83B2A"],["📖 كليهما","both","#2B5FA6"],["— إلغاء","none","#8C7B6E"]].map(([label,val,color])=>(
-            <button key={val} onClick={()=>bulkAssign(val)} style={{ ...S.btn(color), padding:"7px 14px", fontSize:12 }}>{label}</button>
-          ))}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Filters */}
-      <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
-        {["All",...SECTIONS].map(s => {
-          const bp = s!=="All" ? BLUEPRINT[s] : null;
-          const on = filterSec === s;
-          return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"4px 11px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?"#2B5FA6":"rgba(140,110,80,0.18)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":on?"#2B5FA620":"transparent", color:on&&bp?bp.color:on?"#2B5FA6":"#8C7B6E" }}>
-            {s==="All"?"All":s==="Social/Behavioral/Administrative Sciences"?"Social/Admin":s.split(" ")[0]}
-          </button>;
-        })}
-      </div>
-      <div style={{ display:"flex", gap:8, marginBottom:14, alignItems:"center" }}>
-        <input style={{ ...S.input, flex:1 }} value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search questions..." />
-        {bulkMode && (
-          <button onClick={selectAll} style={{ ...S.ghost, padding:"10px 14px", fontSize:12, flexShrink:0 }}>
-            {selected.size===filtered.length?"Deselect All":"Select All"}
-          </button>
-        )}
-        <span style={{ color:T.ink3, fontSize:12, flexShrink:0 }}>{filtered.length} / {questions.length}</span>
-      </div>
+function AdminQuestions({ questions, onChangeQuestions }) {
+  // Bank state
+  const [banks, setBanks] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(true);
+  const [courseBank, setCourseBank] = useState(() => localStorage.getItem("active_course_bank") || "course-bank");
+  const [examBank, setExamBank]   = useState(() => localStorage.getItem("active_exam_bank")   || "exam-bank");
 
-      {/* Question list */}
-      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-        {filtered.length === 0 && <div style={{ ...S.card, textAlign:"center", padding:30, color:T.ink3 }}>No questions found.</div>}
-        {filtered.map(q => {
-          const col = SC[q.section] || { accent:"#2B5FA6" };
-          const assign = q.assign || "none";
-          const isSelected = selected.has(q.id);
-          return (
-            <div key={q.id} onClick={bulkMode ? ()=>toggleSelect(q.id) : undefined}
-              style={{ ...S.card, padding:"12px 15px", border:`2px solid ${isSelected?"#2B5FA6":assign!=="none"?assignColor[assign]+"55":T.border}`, background:isSelected?"rgba(43,95,166,0.07)":assign!=="none"?assignColor[assign]+"06":T.surface, cursor:bulkMode?"pointer":"default", transition:"all 0.15s" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
-                <div style={{ display:"flex", gap:10, flex:1, minWidth:0 }}>
-                  {bulkMode && (
-                    <input type="checkbox" checked={isSelected} onChange={()=>toggleSelect(q.id)} onClick={e=>e.stopPropagation()}
-                      style={{ marginTop:3, width:16, height:16, flexShrink:0, accentColor:"#2B5FA6" }} />
-                  )}
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:"flex", gap:5, marginBottom:5, flexWrap:"wrap" }}>
-                      <span style={S.tag(col.accent)}>{q.section==="Social/Behavioral/Administrative Sciences"?"Social":q.section.split(" ")[0]}</span>
-                      <span style={S.tag("#8C7B6E")}>{q.category}</span>
-                      <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
-                      {assign !== "none" && <span style={S.tag(assignColor[assign])}>{assignLabel[assign]}</span>}
-                    </div>
-                    <p style={{ color:T.ink, fontSize:13, margin:0, lineHeight:1.5, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{q.question}</p>
-                  </div>
+  // Upload state
+  const [uploadTab, setUploadTab] = useState("course-bank");
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
+  const [uploadPreview, setUploadPreview] = useState([]);
+  const [uploadMode, setUploadMode] = useState("add");
+
+  // Questions browsing
+  const [search, setSearch] = useState("");
+  const [filterSec, setFilterSec] = useState("All");
+  const [browseBank, setBrowseBank] = useState("course-bank");
+  const [browseQ, setBrowseQ] = useState([]);
+  const [loadingBrowse, setLoadingBrowse] = useState(false);
+
+  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
+
+  // Load bank stats on mount
+  useEffect(() => {
+    loadBankStats();
+  }, []);
+
+  const loadBankStats = async () => {
+    setLoadingBanks(true);
+    const [courseQs, examQs] = await Promise.all([
+      api.getBankQuestions("course-bank"),
+      api.getBankQuestions("exam-bank"),
+    ]);
+    setBanks([
+      { key:"course-bank", name:"SPLE Course Bank", table:"SPLE-Course-Bank", count: courseQs.length },
+      { key:"exam-bank",   name:"SPLE Exam Bank",   table:"SPLE-Exam-Bank",   count: examQs.length  },
+    ]);
+    setLoadingBanks(false);
+  };
+
+  const selectCourseBank = (key) => {
+    setCourseBank(key);
+    if (key) localStorage.setItem("active_course_bank", key);
+    else localStorage.removeItem("active_course_bank");
+  };
+
+  const selectExamBank = (key) => {
+    setExamBank(key);
+    if (key) localStorage.setItem("active_exam_bank", key);
+    else localStorage.removeItem("active_exam_bank");
+  };
+
+  // Upload Excel to a bank
+  const handleUploadFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploading(true); setUploadMsg(""); setUploadPreview([]);
+    try {
+      const mapped = await parseExcelFile(file);
+      if (!mapped.length) { setUploadMsg("❌ لا توجد أسئلة صالحة"); setUploading(false); return; }
+      setUploadPreview(mapped);
+    } catch(err) { setUploadMsg("❌ خطأ: " + err.message); }
+    setUploading(false);
+  };
+
+  const confirmUpload = async () => {
+    setUploading(true); setUploadMsg("");
+    try {
+      if (uploadMode === "replace") await api.clearBank(uploadTab);
+      const tagged = uploadPreview.map((q,i) => ({ ...q, id: q.id || `${uploadTab}_${Date.now()}_${i}`, bank: uploadTab }));
+      const res = await api.uploadToBank(uploadTab, tagged);
+      setUploadMsg(`✅ تم رفع ${res.uploaded} سؤال`);
+      setUploadPreview([]);
+      await loadBankStats();
+    } catch(err) { setUploadMsg("❌ " + err.message); }
+    setUploading(false);
+  };
+
+  // Browse bank questions
+  useEffect(() => {
+    loadBrowseQ();
+  }, [browseBank]);
+
+  const loadBrowseQ = async () => {
+    setLoadingBrowse(true);
+    const qs = await api.getBankQuestions(browseBank);
+    setBrowseQ(qs);
+    setLoadingBrowse(false);
+  };
+
+  const filtered = browseQ.filter(q =>
+    (filterSec==="All" || q.section===filterSec) &&
+    (!search || q.question?.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const bankColor = { "course-bank":"#1A7A5E", "exam-bank":"#B83B2A" };
+  const bankName  = { "course-bank":"📚 Course Bank", "exam-bank":"🎯 Exam Bank" };
+
+  return (
+    <div>
+      <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>🗄️ إدارة البنوك</h1>
+      <p style={{ color:"#8C7B6E", margin:"0 0 20px", fontSize:13 }}>حدد البنك الفعال لكل مسار وارفع الأسئلة</p>
+
+      {/* ── Active Banks ── */}
+      {loadingBanks
+        ? <div style={{ ...S.card, padding:20, textAlign:"center", color:T.ink3 }}>⏳ جاري تحميل البنوك...</div>
+        : <>
+          <BankSelector label="📚 دورة المراجعة" icon="📚" color="#1A7A5E"
+            bankKey={courseBank} allBanks={banks} onSelectBank={selectCourseBank} />
+          <BankSelector label="🎯 الاختبار الرسمي" icon="🎯" color="#B83B2A"
+            bankKey={examBank} allBanks={banks} onSelectBank={selectExamBank} />
+        </>
+      }
+
+      {/* ── Upload Section ── */}
+      <div style={{ ...S.card, marginTop:20, marginBottom:16 }}>
+        <div style={{ fontWeight:800, fontSize:15, marginBottom:14 }}>📥 رفع أسئلة Excel</div>
+
+        {/* Bank selector tabs */}
+        <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+          {[["course-bank","📚 Course Bank","#1A7A5E"],["exam-bank","🎯 Exam Bank","#B83B2A"]].map(([key,label,color])=>(
+            <button key={key} onClick={()=>{ setUploadTab(key); setUploadPreview([]); setUploadMsg(""); }}
+              style={{ flex:1, padding:"10px", borderRadius:10, border:`2px solid ${uploadTab===key?color:"rgba(140,110,80,0.15)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:uploadTab===key?color+"15":"transparent", color:uploadTab===key?color:"#8C7B6E" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Mode */}
+        <div style={{ display:"flex", background:T.bg2, borderRadius:8, padding:3, marginBottom:12, border:`1px solid ${T.border}` }}>
+          <button onClick={()=>setUploadMode("add")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:uploadMode==="add"?bankColor[uploadTab]:"transparent", color:uploadMode==="add"?"#fff":T.ink3 }}>➕ إضافة للموجود</button>
+          <button onClick={()=>setUploadMode("replace")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:uploadMode==="replace"?"#B83B2A":"transparent", color:uploadMode==="replace"?"#fff":T.ink3 }}>🔄 استبدال الكل</button>
+        </div>
+
+        <label style={{ ...S.btn(bankColor[uploadTab]), padding:"9px 16px", cursor:"pointer", fontSize:13, display:"inline-block" }}>
+          {uploading ? "⏳ جاري القراءة..." : `📂 اختر Excel للـ ${bankName[uploadTab]}`}
+          <input type="file" accept=".xlsx,.xls" onChange={handleUploadFile} style={{ display:"none" }} disabled={uploading} />
+        </label>
+
+        {uploadMsg && <div style={{ marginTop:10, padding:"9px 14px", borderRadius:8, background:uploadMsg.startsWith("✅")?"rgba(26,122,94,0.1)":"rgba(184,59,42,0.08)", color:uploadMsg.startsWith("✅")?"#1A7A5E":"#B83B2A", fontSize:13 }}>{uploadMsg}</div>}
+
+        {uploadPreview.length > 0 && (
+          <div style={{ marginTop:12 }}>
+            <div style={{ fontWeight:700, color:bankColor[uploadTab], marginBottom:8 }}>معاينة: {uploadPreview.length} سؤال → {bankName[uploadTab]}</div>
+            <div style={{ maxHeight:140, overflowY:"auto", marginBottom:10, display:"flex", flexDirection:"column", gap:4 }}>
+              {uploadPreview.slice(0,3).map((q,i)=>(
+                <div key={i} style={{ background:T.bg2, borderRadius:8, padding:"7px 10px", fontSize:12 }}>
+                  <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
+                  <span style={{ marginRight:6, color:T.ink }}> {q.question?.substring(0,80)}...</span>
                 </div>
-                {!bulkMode && (
-                  <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
-                    {[["📚","study","#1A7A5E","دورة"],["🎯","exam","#B83B2A","اختبار"],["📖","both","#2B5FA6","كليهما"]].map(([icon,val,color,label])=>(
-                      <button key={val} onClick={()=>updateAssign(q.id, assign===val?"none":val)}
-                        style={{ padding:"5px 12px", borderRadius:8, border:`1.5px solid ${assign===val?color:"rgba(140,110,80,0.25)"}`, cursor:"pointer", fontSize:11, fontWeight:700, background:assign===val?color:assign==="none"?"rgba(140,110,80,0.05)":"transparent", color:assign===val?"#fff":color, transition:"all 0.15s", opacity:saving[q.id]?0.5:1, whiteSpace:"nowrap", minWidth:80, textAlign:"center" }}>
-                        {saving[q.id] ? "⏳" : `${icon} ${label}`}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              ))}
+              {uploadPreview.length > 3 && <div style={{ color:"#8C7B6E", fontSize:11, textAlign:"center" }}>+{uploadPreview.length-3} سؤال</div>}
             </div>
-          );
-        })}
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={confirmUpload} style={{ ...S.btn(uploadMode==="replace"?"#B83B2A":bankColor[uploadTab]), flex:1, padding:10 }}>
+                {uploadMode==="replace"?`🔄 استبدال بـ ${uploadPreview.length} سؤال`:`➕ إضافة ${uploadPreview.length} سؤال`}
+              </button>
+              <button onClick={()=>setUploadPreview([])} style={{ ...S.ghost, padding:10 }}>إلغاء</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Browse Questions ── */}
+      <div style={{ ...S.card }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+          <div style={{ fontWeight:800, fontSize:15 }}>📋 تصفح الأسئلة</div>
+          <div style={{ display:"flex", gap:6 }}>
+            {[["course-bank","📚","#1A7A5E"],["exam-bank","🎯","#B83B2A"]].map(([key,icon,color])=>(
+              <button key={key} onClick={()=>{ setBrowseBank(key); setFilterSec("All"); setSearch(""); }}
+                style={{ padding:"6px 14px", borderRadius:8, border:`1.5px solid ${browseBank===key?color:"rgba(140,110,80,0.2)"}`, cursor:"pointer", fontSize:12, fontWeight:700, background:browseBank===key?color:"transparent", color:browseBank===key?"#fff":color }}>
+                {icon}
+              </button>
+            ))}
+            <button onClick={loadBrowseQ} style={{ ...S.ghost, padding:"6px 12px", fontSize:12 }}>🔄</button>
+          </div>
+        </div>
+
+        <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
+          {["All",...SECTIONS].map(s=>{
+            const bp = s!=="All"?BLUEPRINT[s]:null; const on=filterSec===s;
+            return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"3px 10px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?bankColor[browseBank]:"rgba(140,110,80,0.18)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":"transparent", color:on&&bp?bp.color:on?bankColor[browseBank]:"#8C7B6E" }}>
+              {s==="All"?"الكل":s==="Social/Behavioral/Administrative Sciences"?"Social":s.split(" ")[0]}
+            </button>;
+          })}
+        </div>
+
+        <input style={{ ...S.input, marginBottom:10 }} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`🔍 بحث في ${bankName[browseBank]}...`} />
+
+        <div style={{ color:T.ink3, fontSize:12, marginBottom:8 }}>{filtered.length} / {browseQ.length} سؤال</div>
+
+        {loadingBrowse
+          ? <div style={{ textAlign:"center", padding:20, color:T.ink3 }}>⏳ جاري التحميل...</div>
+          : <div style={{ maxHeight:400, overflowY:"auto", display:"flex", flexDirection:"column", gap:6 }}>
+              {filtered.length===0 && <div style={{ textAlign:"center", padding:20, color:T.ink3 }}>لا توجد أسئلة</div>}
+              {filtered.map(q=>{
+                const col=SC[q.section]||{accent:"#2B5FA6"};
+                return <div key={q.id} style={{ background:T.bg2, borderRadius:9, padding:"9px 12px" }}>
+                  <div style={{ display:"flex", gap:5, marginBottom:4, flexWrap:"wrap" }}>
+                    <span style={S.tag(col.accent)}>{q.section==="Social/Behavioral/Administrative Sciences"?"Social":q.section?.split(" ")[0]}</span>
+                    <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
+                  </div>
+                  <div style={{ color:T.ink, fontSize:12, lineHeight:1.5 }}>{q.question?.substring(0,120)}{q.question?.length>120?"...":""}</div>
+                </div>;
+              })}
+            </div>
+        }
       </div>
     </div>
   );
@@ -1041,7 +1128,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"🗄️",label:"البنوك"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   const [loadingQ, setLoadingQ] = useState(true);
@@ -1114,11 +1201,14 @@ function StudentDashboard({ user, onLogout }) {
     api.getQuestions().then(qs => { setQuestions(qs); setLoadingQ(false); });
   }, []);
 
-  const startSession = (sessionMode) => {
+  const startSession = async (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
-    // Use assign field from sple-questions
-    const assigned = questions.filter(q => q.assign === sessionMode || q.assign === "both");
-    const pool = assigned.length >= 10 ? assigned : questions; // fallback if none assigned yet
+    // Load from active bank stored in localStorage
+    const bankKey = sessionMode === "study"
+      ? (localStorage.getItem("active_course_bank") || "course-bank")
+      : (localStorage.getItem("active_exam_bank")   || "exam-bank");
+    let pool = await api.getBankQuestions(bankKey);
+    if (pool.length < 10) pool = questions; // fallback to main questions
     const q = buildExam(pool, settings);
     setMode(sessionMode);
     setExamQ(q);
