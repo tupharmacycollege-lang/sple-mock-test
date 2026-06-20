@@ -1133,7 +1133,7 @@ function StudentDashboard({ user, onLogout }) {
   if (loadingQ && questions.length === 0) return <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}><div style={{ fontSize:36 }}>⏳</div><div style={{ color:T.ink2, fontWeight:700 }}>جاري تحميل الأسئلة...</div></div>;
   if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} allQuestions={questions} />;
   if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} onHome={()=>setScreen("home")} />;
-  if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} />;
+  if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} onHome={()=>setScreen("home")} />;
   if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
 
   const examResults = myResults.filter(r => r.mode === "exam" || !r.mode);
@@ -1160,44 +1160,48 @@ function StudentDashboard({ user, onLogout }) {
           ))}
         </div>
 
-        {/* Three mode cards */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, marginBottom:24 }}>
-          {/* Study Materials */}
-          <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.35)", background:"rgba(139,92,246,0.04)", display:"flex", flexDirection:"column" }}>
-            <div style={{ fontSize:28, marginBottom:8 }}>📖</div>
-            <div style={{ fontWeight:800, fontSize:15, color:"#7C4BA0", marginBottom:6 }}>Study Materials</div>
-            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>23 درساً شاملاً مع نقاط مراجعة وجداول مرجعية</div>
-            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(139,92,246,0.12)", color:"#7C4BA0", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📚 23 Lessons</span>
-              <span style={{ background:"rgba(139,92,246,0.12)", color:"#7C4BA0", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🗒️ Key Points</span>
-            </div>
-            <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), width:"100%", padding:10, fontSize:13 }}>Browse Lessons →</button>
-          </div>
+        {/* Mode cards */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
 
           {/* Study Session */}
-          <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.35)", background:"rgba(16,185,129,0.04)", display:"flex", flexDirection:"column" }}>
-            <div style={{ fontSize:28, marginBottom:8 }}>📝</div>
-            <div style={{ fontWeight:800, fontSize:15, color:"#1A7A5E", marginBottom:6 }}>Study Session</div>
-            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>تدرّب مع إجابات فورية وشرح لكل سؤال</div>
-            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>✅ Instant Feedback</span>
+          <div style={{ ...S.card, border:"2px solid rgba(16,185,129,0.4)", background:"rgba(16,185,129,0.04)", display:"flex", flexDirection:"column" }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>📚</div>
+            <div style={{ fontWeight:800, fontSize:16, color:"#1A7A5E", marginBottom:6 }}>وضع الدراسة</div>
+            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:10, lineHeight:1.7, flex:1 }}>
+              تدرّب مع <strong>إجابة فورية وشرح</strong> بعد كل سؤال — مثالي للمراجعة والتعلم
             </div>
-            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:10, fontSize:13 }}>Start Session →</button>
+            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {studySettings.totalQ} سؤال</span>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>✅ شرح فوري</span>
+              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏮️ رجوع للسؤال</span>
+            </div>
+            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:12, fontSize:14 }}>ابدأ الدراسة ←</button>
           </div>
 
-          {/* Exam */}
-          <div style={{ ...S.card, border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.04)", display:"flex", flexDirection:"column" }}>
-            <div style={{ fontSize:28, marginBottom:8 }}>🎯</div>
-            <div style={{ fontWeight:800, fontSize:15, color:"#B83B2A", marginBottom:6 }}>Official Exam</div>
-            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:14, lineHeight:1.6, flex:1 }}>اختبار محاكاة حقيقي بدون إجابات أثناء الاختبار</div>
-            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {examSettings.totalQ} Q</span>
-              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏱️ {examSettings.timeMins} min</span>
-              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🔒 No Feedback</span>
+          {/* Exam Simulator */}
+          <div style={{ ...S.card, border:"2px solid rgba(184,59,42,0.4)", background:"rgba(184,59,42,0.04)", display:"flex", flexDirection:"column" }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>🎯</div>
+            <div style={{ fontWeight:800, fontSize:16, color:"#B83B2A", marginBottom:6 }}>محاكي اختبار الهيئة</div>
+            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:10, lineHeight:1.7, flex:1 }}>
+              بيئة <strong>مطابقة لاختبار SCHS</strong> — بدون شرح، وقت محدد، نتيجة في النهاية
             </div>
-            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:10, fontSize:13 }}>Start Exam →</button>
+            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {examSettings.totalQ} سؤال</span>
+              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏱️ {examSettings.timeMins} دقيقة</span>
+              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🔒 بدون شرح</span>
+            </div>
+            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:12, fontSize:14 }}>ابدأ الاختبار ←</button>
           </div>
+        </div>
+
+        {/* Study Materials */}
+        <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.3)", background:"rgba(139,92,246,0.03)", display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>
+          <div style={{ fontSize:32, flexShrink:0 }}>📖</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:800, fontSize:14, color:"#7C4BA0" }}>مواد الدراسة</div>
+            <div style={{ color:"#8C7B6E", fontSize:12, marginTop:2 }}>23 درساً شاملاً مع نقاط مراجعة وجداول مرجعية</div>
+          </div>
+          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"9px 16px", fontSize:13, flexShrink:0 }}>تصفح ←</button>
         </div>
 
         {/* History */}
@@ -2033,7 +2037,7 @@ function StudyScreen({ questions, onFinish, onHome }) {
   );
 }
 
-function ExamScreen({ questions, onFinish, timeMins }) {
+function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [secsLeft, setSecsLeft] = useState((timeMins || 120) * 60);
@@ -2064,7 +2068,10 @@ function ExamScreen({ questions, onFinish, timeMins }) {
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
       <div style={{ background:col.bg, borderBottom:`1px solid ${col.accent}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <span style={{ color:"#8C7B6E", fontSize:13 }}>🎯 Exam · Q {cur+1}/{questions.length}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <button onClick={()=>{ if(window.confirm("هل تريد الخروج؟ سيتم إلغاء الاختبار الحالي.")) onHome(); }} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
+          <span style={{ color:"#8C7B6E", fontSize:13 }}>🎯 محاكي الاختبار · {cur+1}/{questions.length}</span>
+        </div>
         <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(0,0,0,0.3)", borderRadius:8, padding:"5px 12px" }}>
           <span style={{ fontSize:14 }}>⏱️</span>
           <span style={{ color:timerColor, fontWeight:800, fontSize:15, fontFamily:"monospace" }}>{timeStr}</span>
