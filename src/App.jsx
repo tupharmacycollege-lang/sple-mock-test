@@ -31,6 +31,25 @@ const api = {
       });
     } catch (e) { console.error(e); }
   },
+  getBankQuestions: async (bank) => {
+    try {
+      const res = await fetch(`${API_URL}/${bank}`);
+      if (!res.ok) throw new Error("API error");
+      return await res.json();
+    } catch (e) { console.error(e); return []; }
+  },
+  uploadToBank: async (bank, questions) => {
+    const res = await fetch(`${API_URL}/${bank}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(questions)
+    });
+    return await res.json();
+  },
+  clearBank: async (bank) => {
+    const res = await fetch(`${API_URL}/${bank}`, { method: "DELETE" });
+    return await res.json();
+  },
 };
 
 const DB = {
@@ -487,6 +506,156 @@ function BankTab({ label, accentColor, questions, onChange, importTitle }) {
   );
 }
 
+
+// ===================== BANK MANAGER =====================
+function BankManager() {
+  const [activeTab, setActiveTab] = useState("course"); // course | exam
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [preview, setPreview] = useState([]);
+  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
+
+  const bankKey  = activeTab === "course" ? "course-bank" : "exam-bank";
+  const bankName = activeTab === "course" ? "SPLE-Course-Bank" : "SPLE-Exam-Bank";
+  const bankColor = activeTab === "course" ? "#1A7A5E" : "#B83B2A";
+  const bankIcon  = activeTab === "course" ? "📚" : "🎯";
+
+  useEffect(() => { loadQuestions(); }, [activeTab]);
+
+  const loadQuestions = async () => {
+    setLoading(true); setMsg("");
+    const qs = await api.getBankQuestions(bankKey);
+    setQuestions(qs);
+    setLoading(false);
+  };
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploading(true); setMsg(""); setPreview([]);
+    try {
+      const mapped = await parseExcelFile(file);
+      if (mapped.length === 0) { setMsg("❌ No valid questions found."); setUploading(false); return; }
+      setPreview(mapped);
+    } catch(err) { setMsg("❌ Error: " + err.message); }
+    setUploading(false);
+  };
+
+  const confirmUpload = async (mode) => {
+    setUploading(true); setMsg("");
+    try {
+      if (mode === "replace") await api.clearBank(bankKey);
+      const tagged = preview.map((q, i) => ({ ...q, id: q.id || `${bankKey}_${Date.now()}_${i}`, bank: bankKey }));
+      const res = await api.uploadToBank(bankKey, tagged);
+      setMsg(`✅ تم رفع ${res.uploaded} سؤال إلى ${bankName}`);
+      setPreview([]);
+      await loadQuestions();
+    } catch(err) { setMsg("❌ " + err.message); }
+    setUploading(false);
+  };
+
+  const clearAll = async () => {
+    if (!window.confirm(`حذف جميع أسئلة ${bankName}؟`)) return;
+    setLoading(true);
+    const res = await api.clearBank(bankKey);
+    setMsg(`🗑️ تم حذف ${res.deleted} سؤال`);
+    setQuestions([]);
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>🗄️ Question Banks</h1>
+      <p style={{ color:"#8C7B6E", margin:"0 0 20px", fontSize:13 }}>رفع وإدارة أسئلة الدورة والاختبار بشكل منفصل</p>
+
+      {/* Tab selector */}
+      <div style={{ display:"flex", gap:10, marginBottom:24 }}>
+        {[["course","📚 Course Bank","#1A7A5E","SPLE-Course-Bank"],["exam","🎯 Exam Bank","#B83B2A","SPLE-Exam-Bank"]].map(([key,label,color,table])=>(
+          <button key={key} onClick={()=>setActiveTab(key)} style={{ flex:1, padding:"14px", borderRadius:12, border:`2px solid ${activeTab===key?color:"rgba(140,110,80,0.15)"}`, cursor:"pointer", fontWeight:700, fontSize:14, background:activeTab===key?color+"18":"transparent", color:activeTab===key?color:"#8C7B6E", transition:"all 0.2s" }}>
+            <div style={{ fontSize:22, marginBottom:4 }}>{label.split(" ")[0]}</div>
+            <div>{label.split(" ").slice(1).join(" ")}</div>
+            <div style={{ fontSize:11, fontWeight:400, marginTop:4, color:activeTab===key?color:T.ink3 }}>{table}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div style={{ ...S.card, marginBottom:16, display:"flex", gap:20, alignItems:"center" }}>
+        <div style={{ fontSize:36 }}>{bankIcon}</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontWeight:800, fontSize:18, color:bankColor }}>{bankName}</div>
+          <div style={{ color:T.ink3, fontSize:13 }}>{loading ? "جاري التحميل..." : `${questions.length} سؤال في البنك`}</div>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={loadQuestions} style={{ ...S.ghost, padding:"8px 14px" }}>🔄 Refresh</button>
+          {questions.length > 0 && <button onClick={clearAll} style={{ ...S.ghost, padding:"8px 14px", color:"#B83B2A", border:"1px solid rgba(184,59,42,0.3)" }}>🗑️ Clear All</button>}
+        </div>
+      </div>
+
+      {/* Upload */}
+      <div style={{ ...S.card, marginBottom:16, border:`1px solid ${bankColor}33`, background:bankColor+"06" }}>
+        <div style={{ fontWeight:700, fontSize:14, marginBottom:12, color:bankColor }}>📥 رفع أسئلة Excel إلى {bankName}</div>
+        <div style={{ color:T.ink3, fontSize:12, marginBottom:12 }}>الأعمدة المطلوبة: section, category, difficulty, question, option_a, option_b, option_c, option_d, correct_answer (0-3), explanation</div>
+
+        <label style={{ ...S.btn(bankColor), padding:"9px 16px", cursor:"pointer", fontSize:13, display:"inline-block" }}>
+          {uploading ? "⏳ جاري القراءة..." : "📂 اختر ملف Excel"}
+          <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display:"none" }} disabled={uploading} />
+        </label>
+
+        {msg && <div style={{ marginTop:12, padding:"9px 14px", borderRadius:8, background:msg.startsWith("✅")?"rgba(26,122,94,0.1)":"rgba(184,59,42,0.08)", border:`1px solid ${msg.startsWith("✅")?"rgba(26,122,94,0.3)":"rgba(184,59,42,0.3)"}`, color:msg.startsWith("✅")?"#1A7A5E":"#B83B2A", fontSize:13 }}>{msg}</div>}
+
+        {preview.length > 0 && (
+          <div style={{ marginTop:14 }}>
+            <div style={{ fontWeight:700, color:bankColor, marginBottom:8 }}>معاينة: {preview.length} سؤال</div>
+            <div style={{ maxHeight:160, overflowY:"auto", marginBottom:12, display:"flex", flexDirection:"column", gap:4 }}>
+              {preview.slice(0,4).map((q,i)=>(
+                <div key={i} style={{ background:T.bg2, borderRadius:8, padding:"7px 10px", fontSize:12 }}>
+                  <div style={{ display:"flex", gap:5, marginBottom:3 }}>
+                    <span style={S.tag(bankColor)}>{q.section?.split(" ")[0]}</span>
+                    <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
+                  </div>
+                  <div>{q.question?.substring(0,90)}{q.question?.length>90?"...":""}</div>
+                </div>
+              ))}
+              {preview.length > 4 && <div style={{ color:"#8C7B6E", fontSize:11, textAlign:"center" }}>+{preview.length-4} more…</div>}
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={()=>confirmUpload("replace")} style={{ ...S.btn("#B83B2A"), flex:1, padding:10 }}>🔄 استبدال الكل ({preview.length} سؤال)</button>
+              <button onClick={()=>confirmUpload("add")} style={{ ...S.btn(bankColor), flex:1, padding:10 }}>➕ إضافة للموجود</button>
+              <button onClick={()=>setPreview([])} style={{ ...S.ghost, padding:10 }}>إلغاء</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Questions list preview */}
+      {!loading && questions.length > 0 && (
+        <div style={{ ...S.card }}>
+          <div style={{ fontWeight:700, marginBottom:12 }}>أسئلة {bankName} ({questions.length})</div>
+          <div style={{ maxHeight:400, overflowY:"auto", display:"flex", flexDirection:"column", gap:6 }}>
+            {questions.slice(0,20).map(q=>{
+              const col = SC[q.section]||{accent:"#2B5FA6"};
+              return (
+                <div key={q.id} style={{ background:T.bg2, borderRadius:8, padding:"8px 12px", fontSize:12 }}>
+                  <div style={{ display:"flex", gap:5, marginBottom:4, flexWrap:"wrap" }}>
+                    <span style={S.tag(col.accent)}>{q.section==="Social/Behavioral/Administrative Sciences"?"Social":q.section?.split(" ")[0]}</span>
+                    <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
+                  </div>
+                  <div style={{ color:T.ink }}>{q.question?.substring(0,100)}{q.question?.length>100?"...":""}</div>
+                </div>
+              );
+            })}
+            {questions.length > 20 && <div style={{ color:"#8C7B6E", fontSize:12, textAlign:"center", padding:8 }}>+{questions.length-20} سؤال إضافي…</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminQuestions({ questions, onChangeQuestions }) {
   const [search, setSearch] = useState("");
   const [filterSec, setFilterSec] = useState("All");
@@ -837,7 +1006,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"banks",icon:"🗄️",label:"Banks"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   const [loadingQ, setLoadingQ] = useState(true);
@@ -882,6 +1051,7 @@ function AdminDashboard({ user, onLogout }) {
             <QuestionStats questions={questions} />
           </div>
         )}
+        {tab==="banks" && <BankManager />}
         {tab==="questions" && (loadingQ 
           ? <div style={{ textAlign:"center", padding:60 }}><div style={{ fontSize:40 }}>⏳</div><div style={{ fontWeight:700, marginTop:12 }}>جاري تحميل الأسئلة من DynamoDB...</div><div style={{ color:"#8C7B6E", fontSize:13, marginTop:8 }}>يتم جلب 1,958 سؤال</div></div>
           : <AdminQuestions questions={questions} onChangeQuestions={saveQ} />
@@ -910,12 +1080,17 @@ function StudentDashboard({ user, onLogout }) {
     api.getQuestions().then(qs => { setQuestions(qs); setLoadingQ(false); });
   }, []);
 
-  const startSession = (sessionMode) => {
+  const startSession = async (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
-    // Filter by admin assignment
-    const pool = questions.filter(q => q.assign === sessionMode || q.assign === "both");
-    const fallback = pool.length >= 10 ? pool : questions;
-    const q = buildExam(fallback, settings);
+    const bankKey = sessionMode === "study" ? "course-bank" : "exam-bank";
+    // Try to load from dedicated bank first
+    let pool = await api.getBankQuestions(bankKey);
+    if (pool.length < 10) {
+      // Fallback: use assign field from main questions
+      pool = questions.filter(q => q.assign === sessionMode || q.assign === "both");
+    }
+    if (pool.length < 10) pool = questions; // last fallback
+    const q = buildExam(pool, settings);
     setMode(sessionMode);
     setExamQ(q);
     setScreen(sessionMode);
