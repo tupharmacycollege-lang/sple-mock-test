@@ -1419,44 +1419,67 @@ function StudyMaterialsScreen({ onBack, onStartStudy, allQuestions }) {
         const answered = answers[q.id] !== undefined;
         const correct = answers[q.id] === q.answer;
         const col = SC[q.section] || { accent:color, bg:T.bg };
-        const next = () => {
-          setShowExp(false);
-          if (cur < sectionQuestions.length-1) setCur(p=>p+1);
-          else setPhase("list");
-        };
+        const goNext = () => { setShowExp(false); if (cur < sectionQuestions.length-1) setCur(p=>p+1); else setPhase("list"); };
+        const goPrev = () => { setShowExp(false); if (cur > 0) setCur(p=>p-1); };
+        const diffCol2 = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
         return (
-          <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
-            <div style={{ background:col.bg||T.bg, borderBottom:`1px solid ${color}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>← Lessons</button>
-                <span style={{ color:"#8C7B6E", fontSize:13 }}>Practice Q {cur+1}/{sectionQuestions.length}</span>
-              </div>
-              <span style={{ background:color+"22", color:color, fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📝 {activeSection.split(" ")[0]} Questions</span>
-              <span style={{ color:diffCol[q.difficulty]||"#C47A1E", fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
+          <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:T.ink, direction:"ltr" }}>
+            {/* Header */}
+            <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center", boxShadow:T.shadow }}>
+              <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }}
+                style={{ ...S.ghost, padding:"6px 14px", fontSize:13, display:"flex", alignItems:"center", gap:6 }}>
+                ← Study Materials
+              </button>
+              <span style={{ background:color+"18", color:color, fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20, border:`1px solid ${color}33` }}>
+                📝 {activeSection.split(" ")[0]} Practice
+              </span>
+              <span style={{ color:diffCol2[q.difficulty]||T.ink3, fontWeight:700, fontSize:13, background:(diffCol2[q.difficulty]||T.ink3)+"12", padding:"4px 12px", borderRadius:20 }}>{q.difficulty}</span>
             </div>
-            <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/sectionQuestions.length)*100}%`, height:"100%", background:color, transition:"width 0.3s" }} /></div>
-            <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
-              <div style={{ color:color, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
-              <div style={{ ...S.card, border:`1px solid ${color}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
+            {/* Progress */}
+            <div style={{ height:3, background:T.bg3 }}>
+              <div style={{ width:`${((cur+1)/sectionQuestions.length)*100}%`, height:"100%", background:color, transition:"width 0.3s" }} />
+            </div>
+            <div style={{ maxWidth:700, margin:"0 auto", padding:"22px 22px 100px" }}>
+              <div style={{ color:color, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:"system-ui,sans-serif" }}>{q.section} · {q.category}</div>
+              {/* Question */}
+              <div style={{ ...S.card, border:`1px solid ${color}33`, marginBottom:18 }}>
+                <p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500, fontFamily:"Georgia,serif", color:T.ink }}>{q.question}</p>
+              </div>
+              {/* Options */}
               <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
                 {q.options.map((opt,i)=>{
-                  let bg="rgba(140,110,80,0.05)",border=`1px solid ${T.border}`,c=T.ink;
-                  if(answered){ if(i===q.answer){bg="rgba(26,122,94,0.12)";border="1.5px solid #1A7A5E";c="#1A7A5E";} else if(i===answers[q.id]){bg="rgba(184,59,42,0.10)";border="1.5px solid #B83B2A";c="#B83B2A";} }
-                  return <button key={i} onClick={()=>{ if(!answered){setAnswers(p=>({...p,[q.id]:i})); setShowExp(true);}}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c||T.ink,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
-                    <span style={{ width:26,height:26,borderRadius:7,background:T.bg3,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
-                    {opt}
-                    {answered&&i===q.answer&&<span style={{ marginLeft:"auto" }}>✓</span>}
-                    {answered&&i===answers[q.id]&&i!==q.answer&&<span style={{ marginLeft:"auto" }}>✗</span>}
+                  let bg=T.bg2, border=`1px solid ${T.border}`, c=T.ink;
+                  if(answered){ if(i===q.answer){bg="rgba(26,122,94,0.12)";border="2px solid #1A7A5E";c="#1A7A5E";} else if(i===answers[q.id]){bg="rgba(184,59,42,0.10)";border="2px solid #B83B2A";c="#B83B2A";} }
+                  return <button key={i} onClick={()=>{ if(!answered){setAnswers(p=>({...p,[q.id]:i})); setShowExp(true);}}}
+                    style={{ background:bg, border, borderRadius:10, padding:"13px 16px", cursor:answered?"default":"pointer", textAlign:"left", color:c, fontSize:14, display:"flex", alignItems:"center", gap:12, fontFamily:"system-ui,sans-serif", transition:"all 0.15s" }}>
+                    <span style={{ minWidth:28, height:28, borderRadius:7, background:T.bg3, border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, flexShrink:0, color:T.ink3 }}>{["A","B","C","D"][i]}</span>
+                    <span style={{ flex:1 }}>{opt}</span>
+                    {answered&&i===q.answer&&<span style={{ color:"#1A7A5E", fontWeight:700 }}>✓</span>}
+                    {answered&&i===answers[q.id]&&i!==q.answer&&<span style={{ color:"#B83B2A", fontWeight:700 }}>✗</span>}
                   </button>;
                 })}
               </div>
-              {showExp && <div style={{ background:correct?"rgba(26,122,94,0.10)":"rgba(184,59,42,0.08)", border:`1px solid ${correct?"rgba(26,122,94,0.35)":"rgba(184,59,42,0.30)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
-                <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-                <p style={{ color:T.ink2, fontSize:13, lineHeight:1.7, margin:0 }}>💡 {q.explanation||"No explanation provided."}</p>
-              </div>}
-              {answered && <button onClick={next} style={{ ...S.btn(color), width:"100%", padding:13 }}>
-                {cur<sectionQuestions.length-1?"Next Question →":"🏁 Done — Back to Sections"}
-              </button>}
+              {/* Explanation */}
+              {showExp && (
+                <div style={{ background:correct?"rgba(26,122,94,0.08)":"rgba(184,59,42,0.06)", border:`1.5px solid ${correct?"rgba(26,122,94,0.35)":"rgba(184,59,42,0.30)"}`, borderRadius:12, padding:16, marginBottom:20 }}>
+                  <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13, fontFamily:"system-ui,sans-serif" }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
+                  <p style={{ color:T.ink2, fontSize:13.5, lineHeight:1.7, margin:0, fontFamily:"Georgia,serif" }}>💡 {q.explanation||"No explanation provided."}</p>
+                </div>
+              )}
+            </div>
+            {/* Fixed Bottom Nav — Back right, Next left */}
+            <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"14px 24px", display:"flex", justifyContent:"center", alignItems:"center", gap:20, boxShadow:"0 -4px 16px rgba(60,40,20,0.08)" }}>
+              <button onClick={goPrev} disabled={cur===0}
+                style={{ ...S.ghost, padding:"11px 28px", fontSize:14, opacity:cur===0?0.35:1, display:"flex", alignItems:"center", gap:8 }}>
+                ← Back
+              </button>
+              <span style={{ color:T.ink3, fontSize:13, fontFamily:"system-ui,sans-serif", minWidth:60, textAlign:"center" }}>{cur+1} / {sectionQuestions.length}</span>
+              {answered
+                ? <button onClick={goNext} style={{ ...S.btn(color), padding:"11px 28px", fontSize:14, display:"flex", alignItems:"center", gap:8 }}>
+                    {cur<sectionQuestions.length-1 ? "Next →" : "✅ Done"}
+                  </button>
+                : <button disabled style={{ ...S.btn(T.bg3), padding:"11px 28px", fontSize:14, opacity:0.4, color:T.ink3 }}>Next →</button>
+              }
             </div>
           </div>
         );
