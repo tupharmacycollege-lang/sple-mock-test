@@ -665,7 +665,7 @@ function AdminQuestions({ questions, onChangeQuestions }) {
   const [selected, setSelected] = useState(new Set());
   const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
 
-  const assignLabel = { study:"📖 Study", exam:"🎯 Exam", both:"📚 Both", none:"—" };
+  const assignLabel = { study:"📚 دورة", exam:"🎯 اختبار", both:"📖 كليهما", none:"—" };
   const assignColor = { study:"#1A7A5E", exam:"#B83B2A", both:"#2B5FA6", none:"#8C7B6E" };
 
   const counts = {
@@ -726,7 +726,7 @@ function AdminQuestions({ questions, onChangeQuestions }) {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
         <div>
           <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>❓ Question Assignment</h1>
-          <p style={{ color:"#8C7B6E", margin:0, fontSize:13 }}>حدد لكل سؤال وجهته: دراسة، اختبار، أو كليهما</p>
+          <p style={{ color:"#8C7B6E", margin:0, fontSize:13 }}>📚 دورة المراجعة &nbsp;|&nbsp; 🎯 الاختبار الرسمي &nbsp;|&nbsp; 📖 كليهما</p>
         </div>
         <button onClick={()=>{ setBulkMode(!bulkMode); setSelected(new Set()); }} style={{ ...S.btn(bulkMode?"#B83B2A":"#2B5FA6"), padding:"8px 16px", fontSize:13 }}>
           {bulkMode ? "❌ Cancel Bulk" : "☑️ Bulk Assign"}
@@ -736,10 +736,10 @@ function AdminQuestions({ questions, onChangeQuestions }) {
       {/* Stats bar */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
         {[
-          ["📖 Study", counts.study, "#1A7A5E", "study"],
-          ["🎯 Exam",  counts.exam,  "#B83B2A", "exam"],
-          ["📚 Both",  counts.both,  "#2B5FA6", "both"],
-          ["— Unassigned", counts.unassigned, "#8C7B6E", "unassigned"],
+          ["📚 دورة",      counts.study,      "#1A7A5E", "study"],
+          ["🎯 اختبار",     counts.exam,       "#B83B2A", "exam"],
+          ["📖 كليهما",     counts.both,       "#2B5FA6", "both"],
+          ["— غير محدد",   counts.unassigned,  "#8C7B6E", "unassigned"],
         ].map(([label, count, color, key]) => (
           <div key={key} onClick={() => setFilterAssign(filterAssign===key?"all":key)}
             style={{ background:filterAssign===key?color+"18":T.bg2, border:`2px solid ${filterAssign===key?color:"transparent"}`, borderRadius:12, padding:"12px 14px", cursor:"pointer", transition:"all 0.2s" }}>
@@ -754,7 +754,7 @@ function AdminQuestions({ questions, onChangeQuestions }) {
         <div style={{ ...S.card, marginBottom:14, background:"rgba(43,95,166,0.06)", border:"1.5px solid rgba(43,95,166,0.25)", display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
           <span style={{ fontWeight:700, fontSize:13, color:"#2B5FA6" }}>{selected.size} selected</span>
           <span style={{ color:T.ink3, fontSize:12 }}>Assign all to:</span>
-          {[["📖 Study","study","#1A7A5E"],["🎯 Exam","exam","#B83B2A"],["📚 Both","both","#2B5FA6"],["— None","none","#8C7B6E"]].map(([label,val,color])=>(
+          {[["📚 دورة","study","#1A7A5E"],["🎯 اختبار","exam","#B83B2A"],["📖 كليهما","both","#2B5FA6"],["— إلغاء","none","#8C7B6E"]].map(([label,val,color])=>(
             <button key={val} onClick={()=>bulkAssign(val)} style={{ ...S.btn(color), padding:"7px 14px", fontSize:12 }}>{label}</button>
           ))}
         </div>
@@ -808,7 +808,7 @@ function AdminQuestions({ questions, onChangeQuestions }) {
                 </div>
                 {!bulkMode && (
                   <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                    {[["📖","study","#1A7A5E"],["🎯","exam","#B83B2A"],["📚","both","#2B5FA6"]].map(([icon,val,color])=>(
+                    {[["📚","study","#1A7A5E","دورة"],["🎯","exam","#B83B2A","اختبار"],["📖","both","#2B5FA6","كليهما"]].map(([icon,val,color,tip])=>(
                       <button key={val} onClick={()=>updateAssign(q.id, assign===val?"none":val)}
                         style={{ padding:"6px 10px", borderRadius:8, border:`1.5px solid ${assign===val?color:"rgba(140,110,80,0.2)"}`, cursor:"pointer", fontSize:12, fontWeight:700, background:assign===val?color:"transparent", color:assign===val?"#fff":color, transition:"all 0.15s", opacity:saving[q.id]?0.6:1 }}>
                         {saving[q.id]?"⏳":icon}
@@ -1006,7 +1006,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"banks",icon:"🗄️",label:"Banks"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"❓",label:"Questions"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   const [loadingQ, setLoadingQ] = useState(true);
@@ -1040,7 +1040,7 @@ function AdminDashboard({ user, onLogout }) {
             <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>Overview</h1>
             <p style={{ color:"#8C7B6E", marginBottom:20 }}>Platform summary</p>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:20 }}>
-              {[["❓",questions.length,"Questions","#2B5FA6"],["🎓",users.length,"Students","#1A7A5E"],["📝",results.length,"Exams","#7C4BA0"],["📊",`${avg}%`,"Avg Score","#C47A1E"]].map(([icon,val,label,color])=>(
+              {[["❓",questions.length,"Total Questions","#2B5FA6"],["📚",questions.filter(q=>q.assign==="study"||q.assign==="both").length,"Course Bank","#1A7A5E"],["🎯",questions.filter(q=>q.assign==="exam"||q.assign==="both").length,"Exam Bank","#B83B2A"],["📊",`${avg}%`,"Avg Score","#C47A1E"]].map(([icon,val,label,color])=>(
                 <div key={label} style={{ background:T.bg2, border:`1px solid ${color}33`, borderRadius:14, padding:18 }}>
                   <div style={{ fontSize:24 }}>{icon}</div>
                   <div style={{ fontSize:28, fontWeight:800, color, marginTop:6 }}>{val}</div>
@@ -1051,7 +1051,6 @@ function AdminDashboard({ user, onLogout }) {
             <QuestionStats questions={questions} />
           </div>
         )}
-        {tab==="banks" && <BankManager />}
         {tab==="questions" && (loadingQ 
           ? <div style={{ textAlign:"center", padding:60 }}><div style={{ fontSize:40 }}>⏳</div><div style={{ fontWeight:700, marginTop:12 }}>جاري تحميل الأسئلة من DynamoDB...</div><div style={{ color:"#8C7B6E", fontSize:13, marginTop:8 }}>يتم جلب 1,958 سؤال</div></div>
           : <AdminQuestions questions={questions} onChangeQuestions={saveQ} />
@@ -1080,16 +1079,11 @@ function StudentDashboard({ user, onLogout }) {
     api.getQuestions().then(qs => { setQuestions(qs); setLoadingQ(false); });
   }, []);
 
-  const startSession = async (sessionMode) => {
+  const startSession = (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
-    const bankKey = sessionMode === "study" ? "course-bank" : "exam-bank";
-    // Try to load from dedicated bank first
-    let pool = await api.getBankQuestions(bankKey);
-    if (pool.length < 10) {
-      // Fallback: use assign field from main questions
-      pool = questions.filter(q => q.assign === sessionMode || q.assign === "both");
-    }
-    if (pool.length < 10) pool = questions; // last fallback
+    // Use assign field from sple-questions
+    const assigned = questions.filter(q => q.assign === sessionMode || q.assign === "both");
+    const pool = assigned.length >= 10 ? assigned : questions; // fallback if none assigned yet
     const q = buildExam(pool, settings);
     setMode(sessionMode);
     setExamQ(q);
