@@ -59,6 +59,44 @@ const api = {
     const res = await fetch(`${API_URL}/${bank}`, { method: "DELETE" });
     return await res.json();
   },
+  // Bank registry (sple-banks table)
+  getBanks: async () => {
+    try { const r = await fetch(`${API_URL}/banks`); return await r.json(); }
+    catch(e) { return []; }
+  },
+  createBank: async (name, desc) => {
+    const r = await fetch(`${API_URL}/banks`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name, description:desc}) });
+    return await r.json();
+  },
+  updateBank: async (id, fields) => {
+    const r = await fetch(`${API_URL}/banks/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(fields) });
+    return await r.json();
+  },
+  deleteBank: async (id) => {
+    const r = await fetch(`${API_URL}/banks/${id}`, { method:"DELETE" });
+    return await r.json();
+  },
+  getBankQuestionsByBankId: async (bankId) => {
+    try { const r = await fetch(`${API_URL}/banks/${bankId}/questions`); return await r.json(); }
+    catch(e) { return []; }
+  },
+  uploadToBankById: async (bankId, questions) => {
+    const BATCH=200; let total=0;
+    for(let i=0;i<questions.length;i+=BATCH){
+      const chunk=questions.slice(i,i+BATCH);
+      const r=await fetch(`${API_URL}/banks/${bankId}/questions`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(chunk)});
+      const d=await r.json(); total+=d.uploaded||chunk.length;
+    }
+    return {uploaded:total};
+  },
+  clearBankById: async (bankId) => {
+    const r = await fetch(`${API_URL}/banks/${bankId}/questions`, { method:"DELETE" });
+    return await r.json();
+  },
+  deleteQuestion: async (bankId, qid) => {
+    const r = await fetch(`${API_URL}/banks/${bankId}/questions/${qid}`, { method:"DELETE" });
+    return await r.json();
+  },
 };
 
 const DB = {
@@ -694,265 +732,273 @@ function BankManager() {
   );
 }
 
-function BankSelector({ label, icon, color, bankKey, allBanks, onSelectBank }) {
-  const [open, setOpen] = useState(false);
-  const active = allBanks.find(b => b.key === bankKey);
+// ===================== BANK CONTROL =====================
+function BankControl() {
+  const [banks, setBanks]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [activeBank, setActiveBank] = useState(null);
+  const [bankQ, setBankQ]           = useState([]);
+  const [loadingQ, setLoadingQ]     = useState(false);
+  const [selected, setSelected]     = useState(new Set());
+  const [search, setSearch]         = useState("");
+  const [filterSec, setFilterSec]   = useState("All");
+  const [deleting, setDeleting]     = useState(false);
+  const [msg, setMsg]               = useState("");
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName]       = useState("");
+  const [newDesc, setNewDesc]       = useState("");
+  const [creating, setCreating]     = useState(false);
+  const [uploadPreview, setUploadPreview] = useState([]);
+  const [uploading, setUploading]   = useState(false);
+  const [uploadMode, setUploadMode] = useState("add");
+  const [uploadMsg, setUploadMsg]   = useState("");
+  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
+
+  useEffect(() => { loadBanks(); }, []);
+
+  const loadBanks = async () => {
+    setLoading(true);
+    const data = await api.getBanks();
+    setBanks(data); setLoading(false);
+  };
+
+  const loadBankQ = async (bank) => {
+    setActiveBank(bank); setBankQ([]); setSelected(new Set());
+    setSearch(""); setFilterSec("All"); setMsg(""); setConfirmClear(false);
+    setUploadPreview([]); setUploadMsg("");
+    setLoadingQ(true);
+    const qs = await api.getBankQuestionsByBankId(bank.id);
+    setBankQ(qs); setLoadingQ(false);
+  };
+
+  const createBank = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    await api.createBank(newName.trim(), newDesc.trim());
+    setNewName(""); setNewDesc(""); setShowCreate(false);
+    await loadBanks(); setCreating(false);
+  };
+
+  const deleteBank = async (bank) => {
+    if (!window.confirm(`حذف بنك "${bank.name}" وجميع أسئلته؟`)) return;
+    await api.deleteBank(bank.id);
+    if (activeBank?.id===bank.id) { setActiveBank(null); setBankQ([]); }
+    await loadBanks();
+  };
+
+  const setActive = async (bank, field) => {
+    await api.updateBank(bank.id, {[field]: !bank[field]});
+    await loadBanks();
+  };
+
+  const filtered = bankQ.filter(q =>
+    (filterSec==="All"||q.section===filterSec) &&
+    (!search||q.question?.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const toggleSel = (id) => setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
+  const selAll = () => selected.size===filtered.length?setSelected(new Set()):setSelected(new Set(filtered.map(q=>q.id)));
+
+  const deleteSelected = async () => {
+    if (!selected.size||!activeBank) return;
+    setDeleting(true); setMsg("");
+    const ids=[...selected];
+    for(const qid of ids) await api.deleteQuestion(activeBank.id, qid);
+    const updated = bankQ.filter(q=>!ids.includes(q.id));
+    setBankQ(updated);
+    setBanks(p=>p.map(b=>b.id===activeBank.id?{...b,count:(b.count||bankQ.length)-ids.length}:b));
+    setMsg(`✅ تم حذف ${ids.length} سؤال`);
+    setSelected(new Set()); setDeleting(false);
+  };
+
+  const clearAll = async () => {
+    if (!activeBank) return;
+    setDeleting(true); setMsg("");
+    await api.clearBankById(activeBank.id);
+    setBankQ([]);
+    setBanks(p=>p.map(b=>b.id===activeBank.id?{...b,count:0}:b));
+    setMsg(`✅ تم مسح ${activeBank.name}`);
+    setConfirmClear(false); setSelected(new Set()); setDeleting(false);
+  };
+
+  const handleFile = async (e) => {
+    const file=e.target.files[0]; if(!file) return;
+    e.target.value=""; setUploading(true); setUploadMsg(""); setUploadPreview([]);
+    try {
+      const mapped=await parseExcelFile(file);
+      if(!mapped.length){setUploadMsg("❌ لا توجد أسئلة");setUploading(false);return;}
+      setUploadPreview(mapped);
+    } catch(e2){setUploadMsg("❌ "+e2.message);}
+    setUploading(false);
+  };
+
+  const confirmUpload = async () => {
+    if (!activeBank) return;
+    setUploading(true); setUploadMsg("");
+    try {
+      if(uploadMode==="replace") await api.clearBankById(activeBank.id);
+      const tagged=uploadPreview.map((q,i)=>({...q,id:q.id||`${activeBank.id}_${Date.now()}_${i}`,bankId:activeBank.id}));
+      const res=await api.uploadToBankById(activeBank.id, tagged);
+      setUploadMsg(`✅ تم رفع ${res.uploaded} سؤال`);
+      setUploadPreview([]);
+      await loadBankQ(activeBank); await loadBanks();
+    } catch(e2){setUploadMsg("❌ "+e2.message);}
+    setUploading(false);
+  };
 
   return (
-    <div style={{ ...S.card, border:`2px solid ${color}44`, background:color+"06", marginBottom:12 }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:28 }}>{icon}</span>
-          <div>
-            <div style={{ fontWeight:800, fontSize:15, color }}>{label}</div>
-            <div style={{ color:T.ink3, fontSize:12, marginTop:2 }}>
-              البنك الفعال: {active ? <span style={{ color, fontWeight:700 }}>✅ {active.name} ({active.count} سؤال)</span> : <span style={{ color:"#8C7B6E" }}>— غير محدد</span>}
-            </div>
-          </div>
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <h1 style={{margin:"0 0 4px",fontSize:22,fontWeight:800}}>🗄️ بنوك الأسئلة</h1>
+          <p style={{color:"#8C7B6E",margin:0,fontSize:13}}>أنشئ بنوكاً وارفع أسئلة وحدد البنك الفعال للدورة والاختبار</p>
         </div>
-        <button onClick={()=>setOpen(!open)} style={{ ...S.btn(color), padding:"8px 16px", fontSize:13 }}>
-          {open ? "إغلاق ▲" : "تغيير البنك ▼"}
+        <button onClick={()=>setShowCreate(!showCreate)} style={{...S.btn("#2B5FA6"),padding:"9px 18px"}}>
+          {showCreate?"❌ إلغاء":"➕ بنك جديد"}
         </button>
       </div>
 
-      {open && (
-        <div style={{ marginTop:14, borderTop:`1px solid ${color}22`, paddingTop:14 }}>
-          <div style={{ color:T.ink3, fontSize:12, fontWeight:700, marginBottom:10 }}>اختر البنك لهذا المسار:</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {allBanks.map(b => (
-              <div key={b.key} onClick={()=>{ onSelectBank(b.key); setOpen(false); }}
-                style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", borderRadius:10, border:`1.5px solid ${bankKey===b.key?color:"rgba(140,110,80,0.2)"}`, background:bankKey===b.key?color+"12":"transparent", cursor:"pointer" }}>
-                <div>
-                  <div style={{ fontWeight:700, color:bankKey===b.key?color:T.ink }}>{b.name}</div>
-                  <div style={{ color:T.ink3, fontSize:12 }}>{b.count} سؤال · {b.table}</div>
+      {/* Create form */}
+      {showCreate && (
+        <div style={{...S.card,marginBottom:16,border:"1.5px solid rgba(43,95,166,0.3)",background:"rgba(43,95,166,0.04)"}}>
+          <div style={{fontWeight:700,marginBottom:12,color:"#2B5FA6"}}>➕ إنشاء بنك جديد</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div><label style={S.label}>الاسم *</label><input style={S.input} value={newName} onChange={e=>setNewName(e.target.value)} placeholder="مثال: ORION SPLE 2025" /></div>
+            <div><label style={S.label}>الوصف</label><input style={S.input} value={newDesc} onChange={e=>setNewDesc(e.target.value)} placeholder="اختياري" /></div>
+          </div>
+          <button onClick={createBank} disabled={creating||!newName.trim()} style={{...S.btn("#2B5FA6"),opacity:!newName.trim()?0.5:1}}>
+            {creating?"⏳ جاري الإنشاء...":"✅ إنشاء"}
+          </button>
+        </div>
+      )}
+
+      {/* Banks grid */}
+      {loading
+        ? <div style={{textAlign:"center",padding:40,color:T.ink3}}>⏳ جاري تحميل البنوك...</div>
+        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12,marginBottom:20}}>
+            {banks.length===0 && <div style={{...S.card,textAlign:"center",padding:30,color:T.ink3,gridColumn:"1/-1"}}>لا توجد بنوك — أنشئ أول بنك!</div>}
+            {banks.map(bank=>(
+              <div key={bank.id} style={{...S.card,border:`2px solid ${activeBank?.id===bank.id?"#2B5FA6":T.border}`,background:activeBank?.id===bank.id?"rgba(43,95,166,0.05)":T.surface,transition:"all 0.2s"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  <div style={{flex:1,cursor:"pointer"}} onClick={()=>loadBankQ(bank)}>
+                    <div style={{fontWeight:800,fontSize:14}}>🗄️ {bank.name}</div>
+                    <div style={{color:T.ink3,fontSize:11,marginTop:2}}>{bank.description||"بدون وصف"}</div>
+                  </div>
+                  <button onClick={()=>deleteBank(bank)} style={{background:"rgba(184,59,42,0.1)",border:"none",borderRadius:7,padding:"4px 8px",cursor:"pointer",color:"#B83B2A",fontSize:12,marginRight:4}}>🗑️</button>
                 </div>
-                {bankKey===b.key && <span style={{ color, fontWeight:800, fontSize:18 }}>✓</span>}
+                <div style={{textAlign:"center",background:T.bg2,borderRadius:8,padding:"8px",marginBottom:10,cursor:"pointer"}} onClick={()=>loadBankQ(bank)}>
+                  <span style={{fontSize:20,fontWeight:800,color:"#2B5FA6"}}>{bank.count??"..."}</span>
+                  <span style={{color:T.ink3,fontSize:11,marginRight:4}}> سؤال</span>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>setActive(bank,"activeForStudy")}
+                    style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${bank.activeForStudy?"#1A7A5E":"rgba(140,110,80,0.2)"}`,cursor:"pointer",fontSize:11,fontWeight:700,background:bank.activeForStudy?"#1A7A5E":"transparent",color:bank.activeForStudy?"#fff":"#1A7A5E"}}>
+                    📚 {bank.activeForStudy?"دورة ✓":"دورة"}
+                  </button>
+                  <button onClick={()=>setActive(bank,"activeForExam")}
+                    style={{flex:1,padding:"6px",borderRadius:7,border:`1.5px solid ${bank.activeForExam?"#B83B2A":"rgba(140,110,80,0.2)"}`,cursor:"pointer",fontSize:11,fontWeight:700,background:bank.activeForExam?"#B83B2A":"transparent",color:bank.activeForExam?"#fff":"#B83B2A"}}>
+                    🎯 {bank.activeForExam?"اختبار ✓":"اختبار"}
+                  </button>
+                </div>
               </div>
             ))}
-            <div onClick={()=>{ onSelectBank(null); setOpen(false); }}
-              style={{ padding:"10px 14px", borderRadius:10, border:`1.5px solid ${!bankKey?"#B83B2A":"rgba(140,110,80,0.2)"}`, background:!bankKey?"rgba(184,59,42,0.06)":"transparent", cursor:"pointer", color:!bankKey?"#B83B2A":T.ink3, fontWeight:600, fontSize:13 }}>
-              — إلغاء التحديد
+          </div>
+      }
+
+      {/* Active bank detail */}
+      {activeBank && (
+        <div style={{...S.card,border:"1.5px solid rgba(43,95,166,0.25)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+            <div style={{fontWeight:800,fontSize:15}}>📋 {activeBank.name} — {bankQ.length} سؤال</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <button onClick={selAll} style={{...S.ghost,padding:"5px 11px",fontSize:11}}>
+                {selected.size===filtered.length&&filtered.length>0?"إلغاء الكل":"تحديد الكل"}
+              </button>
+              {selected.size>0 && (
+                <button onClick={deleteSelected} disabled={deleting} style={{...S.btn("#B83B2A"),padding:"5px 12px",fontSize:11,opacity:deleting?0.5:1}}>
+                  {deleting?"⏳...": `🗑️ حذف ${selected.size}`}
+                </button>
+              )}
+              {!confirmClear
+                ? <button onClick={()=>setConfirmClear(true)} style={{...S.ghost,padding:"5px 11px",fontSize:11,color:"#B83B2A",border:"1px solid rgba(184,59,42,0.3)"}}>🗑️ مسح الكل</button>
+                : <><button onClick={clearAll} disabled={deleting} style={{...S.btn("#B83B2A"),padding:"5px 11px",fontSize:11}}>تأكيد الحذف</button><button onClick={()=>setConfirmClear(false)} style={{...S.ghost,padding:"5px 9px",fontSize:11}}>إلغاء</button></>
+              }
+              <button onClick={()=>loadBankQ(activeBank)} style={{...S.ghost,padding:"5px 10px",fontSize:11}}>🔄</button>
             </div>
           </div>
+
+          {msg && <div style={{marginBottom:10,padding:"8px 12px",borderRadius:8,background:msg.startsWith("✅")?"rgba(26,122,94,0.1)":"rgba(184,59,42,0.08)",color:msg.startsWith("✅")?"#1A7A5E":"#B83B2A",fontSize:12}}>{msg}</div>}
+
+          {/* Upload */}
+          <div style={{background:T.bg2,borderRadius:10,padding:12,marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:12,marginBottom:8}}>📥 رفع Excel على {activeBank.name}</div>
+            <div style={{display:"flex",background:T.surface,borderRadius:7,padding:3,marginBottom:8}}>
+              <button onClick={()=>setUploadMode("add")} style={{flex:1,padding:"5px",borderRadius:5,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,fontFamily:"system-ui,sans-serif",background:uploadMode==="add"?"#1A7A5E":"transparent",color:uploadMode==="add"?"#fff":T.ink3}}>➕ إضافة</button>
+              <button onClick={()=>setUploadMode("replace")} style={{flex:1,padding:"5px",borderRadius:5,border:"none",cursor:"pointer",fontWeight:700,fontSize:11,fontFamily:"system-ui,sans-serif",background:uploadMode==="replace"?"#B83B2A":"transparent",color:uploadMode==="replace"?"#fff":T.ink3}}>🔄 استبدال</button>
+            </div>
+            <label style={{...S.btn("#2B5FA6"),padding:"7px 14px",cursor:"pointer",fontSize:12,display:"inline-block"}}>
+              {uploading?"⏳ جاري القراءة...":"📂 اختر ملف Excel"}
+              <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{display:"none"}} disabled={uploading} />
+            </label>
+            {uploadMsg && <div style={{marginTop:6,fontSize:12,color:uploadMsg.startsWith("✅")?"#1A7A5E":"#B83B2A"}}>{uploadMsg}</div>}
+            {uploadPreview.length>0 && (
+              <div style={{marginTop:8,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                <span style={{color:"#2B5FA6",fontWeight:700,fontSize:12}}>معاينة: {uploadPreview.length} سؤال</span>
+                <button onClick={confirmUpload} style={{...S.btn(uploadMode==="replace"?"#B83B2A":"#1A7A5E"),padding:"5px 12px",fontSize:11}}>
+                  {uploadMode==="replace"?`🔄 استبدال بـ ${uploadPreview.length}`:`➕ إضافة ${uploadPreview.length}`}
+                </button>
+                <button onClick={()=>setUploadPreview([])} style={{...S.ghost,padding:"5px 9px",fontSize:11}}>إلغاء</button>
+              </div>
+            )}
+          </div>
+
+          {/* Filters */}
+          <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
+            {["All",...SECTIONS].map(s=>{
+              const bp=s!=="All"?BLUEPRINT[s]:null; const on=filterSec===s;
+              return <button key={s} onClick={()=>setFilterSec(s)} style={{padding:"3px 9px",borderRadius:20,border:`1.5px solid ${on&&bp?bp.color:on?"#2B5FA6":"rgba(140,110,80,0.15)"}`,cursor:"pointer",fontSize:10,fontWeight:600,background:on&&bp?bp.color+"22":"transparent",color:on&&bp?bp.color:on?"#2B5FA6":"#8C7B6E"}}>
+                {s==="All"?"الكل":s==="Social/Behavioral/Administrative Sciences"?"Social":s.split(" ")[0]}
+              </button>;
+            })}
+          </div>
+          <div style={{display:"flex",gap:8,marginBottom:8}}>
+            <input style={{...S.input,flex:1}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 بحث..." />
+            <span style={{color:T.ink3,fontSize:11,alignSelf:"center",flexShrink:0}}>{filtered.length}/{bankQ.length}</span>
+          </div>
+
+          {/* List */}
+          {loadingQ
+            ? <div style={{textAlign:"center",padding:24,color:T.ink3}}>⏳ جاري التحميل...</div>
+            : <div style={{maxHeight:450,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
+                {filtered.length===0 && <div style={{textAlign:"center",padding:20,color:T.ink3}}>لا توجد أسئلة</div>}
+                {filtered.map(q=>{
+                  const col=SC[q.section]||{accent:"#2B5FA6"};
+                  const isSel=selected.has(q.id);
+                  return (
+                    <div key={q.id} onClick={()=>toggleSel(q.id)}
+                      style={{background:isSel?"rgba(184,59,42,0.06)":T.bg2,borderRadius:8,padding:"8px 11px",border:`1.5px solid ${isSel?"#B83B2A":"transparent"}`,cursor:"pointer",transition:"all 0.1s"}}>
+                      <div style={{display:"flex",gap:8}}>
+                        <input type="checkbox" checked={isSel} onChange={()=>toggleSel(q.id)} onClick={e=>e.stopPropagation()} style={{marginTop:2,width:14,height:14,flexShrink:0,accentColor:"#B83B2A"}} />
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",gap:4,marginBottom:3,flexWrap:"wrap"}}>
+                            <span style={S.tag(col.accent)}>{q.section==="Social/Behavioral/Administrative Sciences"?"Social":q.section?.split(" ")[0]}</span>
+                            <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
+                          </div>
+                          <div style={{color:T.ink,fontSize:12,lineHeight:1.5}}>{q.question?.substring(0,110)}{q.question?.length>110?"...":""}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+          }
         </div>
       )}
     </div>
   );
 }
 
-function AdminQuestions({ questions, onChangeQuestions }) {
-  // Bank state
-  const [banks, setBanks] = useState([]);
-  const [loadingBanks, setLoadingBanks] = useState(true);
-  const [courseBank, setCourseBank] = useState(() => localStorage.getItem("active_course_bank") || "course-bank");
-  const [examBank, setExamBank]   = useState(() => localStorage.getItem("active_exam_bank")   || "exam-bank");
-
-  // Upload state
-  const [uploadTab, setUploadTab] = useState("course-bank");
-  const [uploading, setUploading] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState("");
-  const [uploadPreview, setUploadPreview] = useState([]);
-  const [uploadMode, setUploadMode] = useState("add");
-
-  // Questions browsing
-  const [search, setSearch] = useState("");
-  const [filterSec, setFilterSec] = useState("All");
-  const [browseBank, setBrowseBank] = useState("course-bank");
-  const [browseQ, setBrowseQ] = useState([]);
-  const [loadingBrowse, setLoadingBrowse] = useState(false);
-
-  const diffCol = {"سهل":"#1A7A5E","متوسط":"#C47A1E","صعب":"#B83B2A"};
-
-  // Load bank stats on mount
-  useEffect(() => {
-    loadBankStats();
-  }, []);
-
-  const loadBankStats = async () => {
-    setLoadingBanks(true);
-    const [courseQs, examQs] = await Promise.all([
-      api.getBankQuestions("course-bank"),
-      api.getBankQuestions("exam-bank"),
-    ]);
-    setBanks([
-      { key:"course-bank", name:"SPLE Course Bank", table:"SPLE-Course-Bank", count: courseQs.length },
-      { key:"exam-bank",   name:"SPLE Exam Bank",   table:"SPLE-Exam-Bank",   count: examQs.length  },
-    ]);
-    setLoadingBanks(false);
-  };
-
-  const selectCourseBank = (key) => {
-    setCourseBank(key);
-    if (key) localStorage.setItem("active_course_bank", key);
-    else localStorage.removeItem("active_course_bank");
-  };
-
-  const selectExamBank = (key) => {
-    setExamBank(key);
-    if (key) localStorage.setItem("active_exam_bank", key);
-    else localStorage.removeItem("active_exam_bank");
-  };
-
-  // Upload Excel to a bank
-  const handleUploadFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = "";
-    setUploading(true); setUploadMsg(""); setUploadPreview([]);
-    try {
-      const mapped = await parseExcelFile(file);
-      if (!mapped.length) { setUploadMsg("❌ لا توجد أسئلة صالحة"); setUploading(false); return; }
-      setUploadPreview(mapped);
-    } catch(err) { setUploadMsg("❌ خطأ: " + err.message); }
-    setUploading(false);
-  };
-
-  const confirmUpload = async () => {
-    setUploading(true); setUploadMsg("");
-    try {
-      if (uploadMode === "replace") await api.clearBank(uploadTab);
-      const tagged = uploadPreview.map((q,i) => ({ ...q, id: q.id || `${uploadTab}_${Date.now()}_${i}`, bank: uploadTab }));
-      const res = await api.uploadToBank(uploadTab, tagged);
-      setUploadMsg(`✅ تم رفع ${res.uploaded} سؤال`);
-      setUploadPreview([]);
-      await loadBankStats();
-    } catch(err) { setUploadMsg("❌ " + err.message); }
-    setUploading(false);
-  };
-
-  // Browse bank questions
-  useEffect(() => {
-    loadBrowseQ();
-  }, [browseBank]);
-
-  const loadBrowseQ = async () => {
-    setLoadingBrowse(true);
-    const qs = await api.getBankQuestions(browseBank);
-    setBrowseQ(qs);
-    setLoadingBrowse(false);
-  };
-
-  const filtered = browseQ.filter(q =>
-    (filterSec==="All" || q.section===filterSec) &&
-    (!search || q.question?.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  const bankColor = { "course-bank":"#1A7A5E", "exam-bank":"#B83B2A" };
-  const bankName  = { "course-bank":"📚 Course Bank", "exam-bank":"🎯 Exam Bank" };
-
-  return (
-    <div>
-      <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>🗄️ إدارة البنوك</h1>
-      <p style={{ color:"#8C7B6E", margin:"0 0 20px", fontSize:13 }}>حدد البنك الفعال لكل مسار وارفع الأسئلة</p>
-
-      {/* ── Active Banks ── */}
-      {loadingBanks
-        ? <div style={{ ...S.card, padding:20, textAlign:"center", color:T.ink3 }}>⏳ جاري تحميل البنوك...</div>
-        : <>
-          <BankSelector label="📚 دورة المراجعة" icon="📚" color="#1A7A5E"
-            bankKey={courseBank} allBanks={banks} onSelectBank={selectCourseBank} />
-          <BankSelector label="🎯 الاختبار الرسمي" icon="🎯" color="#B83B2A"
-            bankKey={examBank} allBanks={banks} onSelectBank={selectExamBank} />
-        </>
-      }
-
-      {/* ── Upload Section ── */}
-      <div style={{ ...S.card, marginTop:20, marginBottom:16 }}>
-        <div style={{ fontWeight:800, fontSize:15, marginBottom:14 }}>📥 رفع أسئلة Excel</div>
-
-        {/* Bank selector tabs */}
-        <div style={{ display:"flex", gap:8, marginBottom:14 }}>
-          {[["course-bank","📚 Course Bank","#1A7A5E"],["exam-bank","🎯 Exam Bank","#B83B2A"]].map(([key,label,color])=>(
-            <button key={key} onClick={()=>{ setUploadTab(key); setUploadPreview([]); setUploadMsg(""); }}
-              style={{ flex:1, padding:"10px", borderRadius:10, border:`2px solid ${uploadTab===key?color:"rgba(140,110,80,0.15)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:uploadTab===key?color+"15":"transparent", color:uploadTab===key?color:"#8C7B6E" }}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Mode */}
-        <div style={{ display:"flex", background:T.bg2, borderRadius:8, padding:3, marginBottom:12, border:`1px solid ${T.border}` }}>
-          <button onClick={()=>setUploadMode("add")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:uploadMode==="add"?bankColor[uploadTab]:"transparent", color:uploadMode==="add"?"#fff":T.ink3 }}>➕ إضافة للموجود</button>
-          <button onClick={()=>setUploadMode("replace")} style={{ flex:1, padding:"7px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:700, fontSize:12, fontFamily:"system-ui,sans-serif", background:uploadMode==="replace"?"#B83B2A":"transparent", color:uploadMode==="replace"?"#fff":T.ink3 }}>🔄 استبدال الكل</button>
-        </div>
-
-        <label style={{ ...S.btn(bankColor[uploadTab]), padding:"9px 16px", cursor:"pointer", fontSize:13, display:"inline-block" }}>
-          {uploading ? "⏳ جاري القراءة..." : `📂 اختر Excel للـ ${bankName[uploadTab]}`}
-          <input type="file" accept=".xlsx,.xls" onChange={handleUploadFile} style={{ display:"none" }} disabled={uploading} />
-        </label>
-
-        {uploadMsg && <div style={{ marginTop:10, padding:"9px 14px", borderRadius:8, background:uploadMsg.startsWith("✅")?"rgba(26,122,94,0.1)":"rgba(184,59,42,0.08)", color:uploadMsg.startsWith("✅")?"#1A7A5E":"#B83B2A", fontSize:13 }}>{uploadMsg}</div>}
-
-        {uploadPreview.length > 0 && (
-          <div style={{ marginTop:12 }}>
-            <div style={{ fontWeight:700, color:bankColor[uploadTab], marginBottom:8 }}>معاينة: {uploadPreview.length} سؤال → {bankName[uploadTab]}</div>
-            <div style={{ maxHeight:140, overflowY:"auto", marginBottom:10, display:"flex", flexDirection:"column", gap:4 }}>
-              {uploadPreview.slice(0,3).map((q,i)=>(
-                <div key={i} style={{ background:T.bg2, borderRadius:8, padding:"7px 10px", fontSize:12 }}>
-                  <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
-                  <span style={{ marginRight:6, color:T.ink }}> {q.question?.substring(0,80)}...</span>
-                </div>
-              ))}
-              {uploadPreview.length > 3 && <div style={{ color:"#8C7B6E", fontSize:11, textAlign:"center" }}>+{uploadPreview.length-3} سؤال</div>}
-            </div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={confirmUpload} style={{ ...S.btn(uploadMode==="replace"?"#B83B2A":bankColor[uploadTab]), flex:1, padding:10 }}>
-                {uploadMode==="replace"?`🔄 استبدال بـ ${uploadPreview.length} سؤال`:`➕ إضافة ${uploadPreview.length} سؤال`}
-              </button>
-              <button onClick={()=>setUploadPreview([])} style={{ ...S.ghost, padding:10 }}>إلغاء</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Browse Questions ── */}
-      <div style={{ ...S.card }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-          <div style={{ fontWeight:800, fontSize:15 }}>📋 تصفح الأسئلة</div>
-          <div style={{ display:"flex", gap:6 }}>
-            {[["course-bank","📚","#1A7A5E"],["exam-bank","🎯","#B83B2A"]].map(([key,icon,color])=>(
-              <button key={key} onClick={()=>{ setBrowseBank(key); setFilterSec("All"); setSearch(""); }}
-                style={{ padding:"6px 14px", borderRadius:8, border:`1.5px solid ${browseBank===key?color:"rgba(140,110,80,0.2)"}`, cursor:"pointer", fontSize:12, fontWeight:700, background:browseBank===key?color:"transparent", color:browseBank===key?"#fff":color }}>
-                {icon}
-              </button>
-            ))}
-            <button onClick={loadBrowseQ} style={{ ...S.ghost, padding:"6px 12px", fontSize:12 }}>🔄</button>
-          </div>
-        </div>
-
-        <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
-          {["All",...SECTIONS].map(s=>{
-            const bp = s!=="All"?BLUEPRINT[s]:null; const on=filterSec===s;
-            return <button key={s} onClick={()=>setFilterSec(s)} style={{ padding:"3px 10px", borderRadius:20, border:`1.5px solid ${on&&bp?bp.color:on?bankColor[browseBank]:"rgba(140,110,80,0.18)"}`, cursor:"pointer", fontSize:11, fontWeight:600, background:on&&bp?bp.color+"22":"transparent", color:on&&bp?bp.color:on?bankColor[browseBank]:"#8C7B6E" }}>
-              {s==="All"?"الكل":s==="Social/Behavioral/Administrative Sciences"?"Social":s.split(" ")[0]}
-            </button>;
-          })}
-        </div>
-
-        <input style={{ ...S.input, marginBottom:10 }} value={search} onChange={e=>setSearch(e.target.value)} placeholder={`🔍 بحث في ${bankName[browseBank]}...`} />
-
-        <div style={{ color:T.ink3, fontSize:12, marginBottom:8 }}>{filtered.length} / {browseQ.length} سؤال</div>
-
-        {loadingBrowse
-          ? <div style={{ textAlign:"center", padding:20, color:T.ink3 }}>⏳ جاري التحميل...</div>
-          : <div style={{ maxHeight:400, overflowY:"auto", display:"flex", flexDirection:"column", gap:6 }}>
-              {filtered.length===0 && <div style={{ textAlign:"center", padding:20, color:T.ink3 }}>لا توجد أسئلة</div>}
-              {filtered.map(q=>{
-                const col=SC[q.section]||{accent:"#2B5FA6"};
-                return <div key={q.id} style={{ background:T.bg2, borderRadius:9, padding:"9px 12px" }}>
-                  <div style={{ display:"flex", gap:5, marginBottom:4, flexWrap:"wrap" }}>
-                    <span style={S.tag(col.accent)}>{q.section==="Social/Behavioral/Administrative Sciences"?"Social":q.section?.split(" ")[0]}</span>
-                    <span style={S.tag(diffCol[q.difficulty]||"#C47A1E")}>{q.difficulty}</span>
-                  </div>
-                  <div style={{ color:T.ink, fontSize:12, lineHeight:1.5 }}>{q.question?.substring(0,120)}{q.question?.length>120?"...":""}</div>
-                </div>;
-              })}
-            </div>
-        }
-      </div>
-    </div>
-  );
-}
 
 // ===================== ADMIN STUDENTS =====================
 function AdminStudents({ users, onChange }) {
@@ -1135,7 +1181,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"🗄️",label:"البنوك"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"🗄️",label:"البنوك"},{id:"bankcontrol",icon:"🎛️",label:"التحكم"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   const [loadingQ, setLoadingQ] = useState(true);
@@ -1180,6 +1226,7 @@ function AdminDashboard({ user, onLogout }) {
             <QuestionStats questions={questions} />
           </div>
         )}
+        {tab==="bankcontrol" && <BankControl />}
         {tab==="questions" && (loadingQ 
           ? <div style={{ textAlign:"center", padding:60 }}><div style={{ fontSize:40 }}>⏳</div><div style={{ fontWeight:700, marginTop:12 }}>جاري تحميل الأسئلة من DynamoDB...</div><div style={{ color:"#8C7B6E", fontSize:13, marginTop:8 }}>يتم جلب 1,958 سؤال</div></div>
           : <AdminQuestions questions={questions} onChangeQuestions={saveQ} />
@@ -1210,16 +1257,16 @@ function StudentDashboard({ user, onLogout }) {
 
   const startSession = async (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
-    // Load from active bank stored in localStorage
-    const bankKey = sessionMode === "study"
-      ? (localStorage.getItem("active_course_bank") || "course-bank")
-      : (localStorage.getItem("active_exam_bank")   || "exam-bank");
-    let pool = await api.getBankQuestions(bankKey);
-    if (pool.length < 10) pool = questions; // fallback to main questions
+    const field = sessionMode === "study" ? "activeForStudy" : "activeForExam";
+    let pool = [];
+    try {
+      const banks = await api.getBanks();
+      const activeBank = banks.find(b => b[field]);
+      if (activeBank) pool = await api.getBankQuestionsByBankId(activeBank.id);
+    } catch(e) { console.error(e); }
+    if (pool.length < 10) pool = questions;
     const q = buildExam(pool, settings);
-    setMode(sessionMode);
-    setExamQ(q);
-    setScreen(sessionMode);
+    setMode(sessionMode); setExamQ(q); setScreen(sessionMode);
   };
 
   const finishSession = (answers) => {
