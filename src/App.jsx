@@ -1181,7 +1181,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"questions",icon:"🗄️",label:"البنوك"},{id:"bankcontrol",icon:"🎛️",label:"التحكم"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"bankcontrol",icon:"🗄️",label:"البنوك"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   const [loadingQ, setLoadingQ] = useState(true);
@@ -1227,10 +1227,7 @@ function AdminDashboard({ user, onLogout }) {
           </div>
         )}
         {tab==="bankcontrol" && <BankControl />}
-        {tab==="questions" && (loadingQ 
-          ? <div style={{ textAlign:"center", padding:60 }}><div style={{ fontSize:40 }}>⏳</div><div style={{ fontWeight:700, marginTop:12 }}>جاري تحميل الأسئلة من DynamoDB...</div><div style={{ color:"#8C7B6E", fontSize:13, marginTop:8 }}>يتم جلب 1,958 سؤال</div></div>
-          : <AdminQuestions questions={questions} onChangeQuestions={saveQ} />
-        )}
+
         {tab==="students" && <AdminStudents users={users} onChange={saveU} />}
         {tab==="reports" && <AdminReports users={users} results={results} />}
         {tab==="settings" && <AdminExamSettings />}
