@@ -1296,11 +1296,14 @@ function AdminDashboard({ user, onLogout }) {
     api.getBanks().then(banks => {
       const course = banks.find(b => b.activeForStudy);
       const exam   = banks.find(b => b.activeForExam);
+      // Show count from bank registry first (fast)
+      setBankStats({ course: course?.count || 0, exam: exam?.count || 0 });
+      // Then load accurate counts
       Promise.all([
-        course ? api.getBankQuestionsByBankId(course.id).then(q=>q.length) : Promise.resolve(0),
-        exam   ? api.getBankQuestionsByBankId(exam.id).then(q=>q.length)   : Promise.resolve(0),
+        course ? api.getBankQuestionsByBankId(course.id).then(q=>q.length).catch(()=>course?.count||0) : Promise.resolve(0),
+        exam   ? api.getBankQuestionsByBankId(exam.id).then(q=>q.length).catch(()=>exam?.count||0)     : Promise.resolve(0),
       ]).then(([c, e]) => setBankStats({ course: c, exam: e }));
-    });
+    }).catch(e => console.error("getBanks error:", e));
     // Load results from DynamoDB
     api.getResults().then(res => {
       if (res.length > 0) { setResults(res); DB.saveResults(res); }
@@ -1420,10 +1423,13 @@ function StudentDashboard({ user, onLogout }) {
   if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} onHome={()=>setScreen("home")} />;
   if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
 
-  const examResults = myResults.filter(r => r.mode === "exam" || !r.mode);
+  const examResults  = myResults.filter(r => r.mode === "exam" || !r.mode);
   const studyResults = myResults.filter(r => r.mode === "study");
-  const avg = examResults.length ? Math.round(examResults.reduce((a,r)=>a+r.score,0)/examResults.length) : 0;
-  const best = examResults.length ? Math.max(...examResults.map(r=>r.score)) : 0;
+  const examAvg  = examResults.length  ? Math.round(examResults.reduce((a,r)=>a+r.score,0)/examResults.length)  : 0;
+  const studyAvg = studyResults.length ? Math.round(studyResults.reduce((a,r)=>a+r.score,0)/studyResults.length) : 0;
+  const examBest  = examResults.length  ? Math.max(...examResults.map(r=>r.score))  : 0;
+  const studyBest = studyResults.length ? Math.max(...studyResults.map(r=>r.score)) : 0;
+  const [histTab, setHistTab] = useState("exam");
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
@@ -1437,11 +1443,32 @@ function StudentDashboard({ user, onLogout }) {
       </div>
 
       <div style={{ maxWidth:720, margin:"0 auto", padding:24 }}>
-        {/* Stats */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:24 }}>
-          {[["📝",examResults.length,"Exams Taken","#2B5FA6"],["📊",`${avg}%`,"Avg Score","#1A7A5E"],["🏆",`${best}%`,"Best Score","#C47A1E"]].map(([icon,val,label,color])=>(
-            <div key={label} style={{ background:T.bg2, border:`1px solid ${color}33`, borderRadius:14, padding:18 }}><div style={{ fontSize:22 }}>{icon}</div><div style={{ fontSize:26, fontWeight:800, color, marginTop:6 }}>{val}</div><div style={{ color:"#8C7B6E", fontSize:12 }}>{label}</div></div>
-          ))}
+        {/* Stats - Exam */}
+        <div style={{ ...S.card, marginBottom:14, border:"1.5px solid rgba(184,59,42,0.2)", background:"rgba(184,59,42,0.03)" }}>
+          <div style={{ fontWeight:800, fontSize:14, color:"#B83B2A", marginBottom:12 }}>🎯 إحصائيات الاختبار الرسمي</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+            {[["📝",examResults.length,"محاولات","#B83B2A"],["📊",`${examAvg}%`,"متوسط الدرجات","#2B5FA6"],["🏆",`${examBest}%`,"أفضل درجة","#C47A1E"]].map(([icon,val,label,color])=>(
+              <div key={label} style={{ background:T.bg2, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
+                <div style={{ fontSize:18 }}>{icon}</div>
+                <div style={{ fontSize:22, fontWeight:800, color, marginTop:4 }}>{val}</div>
+                <div style={{ color:"#8C7B6E", fontSize:11, marginTop:2 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats - Study */}
+        <div style={{ ...S.card, marginBottom:20, border:"1.5px solid rgba(26,122,94,0.2)", background:"rgba(26,122,94,0.03)" }}>
+          <div style={{ fontWeight:800, fontSize:14, color:"#1A7A5E", marginBottom:12 }}>📚 إحصائيات دورة المراجعة</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+            {[["📝",studyResults.length,"محاولات","#1A7A5E"],["📊",`${studyAvg}%`,"متوسط الدرجات","#2B5FA6"],["🏆",`${studyBest}%`,"أفضل درجة","#C47A1E"]].map(([icon,val,label,color])=>(
+              <div key={label} style={{ background:T.bg2, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
+                <div style={{ fontSize:18 }}>{icon}</div>
+                <div style={{ fontSize:22, fontWeight:800, color, marginTop:4 }}>{val}</div>
+                <div style={{ color:"#8C7B6E", fontSize:11, marginTop:2 }}>{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Mode cards */}
@@ -1490,17 +1517,31 @@ function StudentDashboard({ user, onLogout }) {
 
         {/* History */}
         <div style={S.card}>
-          <div style={{ fontWeight:700, marginBottom:14 }}>Exam History</div>
-          {examResults.length===0 ? <p style={{ color:T.ink3, textAlign:"center", padding:"16px 0" }}>No exams yet.</p> : (
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {[...examResults].reverse().slice(0,10).map((r,i)=>(
-                <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:T.bg2, borderRadius:10, padding:"10px 14px" }}>
-                  <div><div style={{ fontWeight:700 }}>{r.correct}/{r.total} Correct</div><div style={{ color:"#8C7B6E", fontSize:12 }}>{r.date}</div></div>
-                  <div style={{ fontSize:22, fontWeight:800, color:r.score>=70?"#1A7A5E":r.score>=60?"#C47A1E":"#B83B2A" }}>{r.score}%</div>
-                </div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <div style={{ fontWeight:800, fontSize:15 }}>📋 السجل</div>
+            <div style={{ display:"flex", gap:6 }}>
+              {[["exam","🎯 الاختبار","#B83B2A"],["study","📚 الدورة","#1A7A5E"]].map(([key,label,color])=>(
+                <button key={key} onClick={()=>setHistTab(key)}
+                  style={{ padding:"5px 12px", borderRadius:8, border:`1.5px solid ${histTab===key?color:"rgba(140,110,80,0.2)"}`, cursor:"pointer", fontSize:12, fontWeight:700, background:histTab===key?color:"transparent", color:histTab===key?"#fff":color }}>
+                  {label}
+                </button>
               ))}
             </div>
-          )}
+          </div>
+          {(histTab==="exam"?examResults:studyResults).length===0
+            ? <p style={{ color:T.ink3, textAlign:"center", padding:"20px 0" }}>لا توجد نتائج بعد</p>
+            : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {[...(histTab==="exam"?examResults:studyResults)].reverse().slice(0,10).map((r,i)=>(
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:T.bg2, borderRadius:10, padding:"10px 14px" }}>
+                    <div>
+                      <div style={{ fontWeight:700 }}>{r.correct}/{r.total} إجابة صحيحة</div>
+                      <div style={{ color:"#8C7B6E", fontSize:12 }}>{r.date}</div>
+                    </div>
+                    <div style={{ fontSize:22, fontWeight:800, color:r.score>=70?"#1A7A5E":r.score>=60?"#C47A1E":"#B83B2A" }}>{r.score}%</div>
+                  </div>
+                ))}
+              </div>
+          }
         </div>
       </div>
     </div>
