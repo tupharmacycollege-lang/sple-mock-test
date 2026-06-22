@@ -1055,29 +1055,117 @@ function AdminStudents({ users, onChange }) {
 
 // ===================== ADMIN REPORTS =====================
 function AdminReports({ users, results }) {
-  const rows = users.map(u => {
-    const ur = results.filter(r=>r.userId===u.id);
-    return { ...u, exams:ur.length, avg:ur.length?Math.round(ur.reduce((a,r)=>a+r.score,0)/ur.length):null, last:ur.length?ur[ur.length-1].date:null };
-  });
-  return (
-    <div>
-      <h2 style={{ margin:"0 0 16px", fontSize:18, fontWeight:700 }}>Reports</h2>
-      {rows.length===0 ? <div style={{ ...S.card, textAlign:"center", padding:40 }}><p style={{ color:"#8C7B6E" }}>No data yet.</p></div> : (
-        <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
+  const [activeTab, setActiveTab] = useState("exam"); // exam | study | all
+
+  const scoreColor = (s) => s >= 70 ? "#1A7A5E" : s >= 60 ? "#C47A1E" : "#B83B2A";
+  const scoreBg    = (s) => s >= 70 ? "rgba(26,122,94,0.1)" : s >= 60 ? "rgba(196,122,30,0.1)" : "rgba(184,59,42,0.08)";
+
+  // Filter results by mode
+  const examResults  = results.filter(r => r.mode === "exam"  || !r.mode);
+  const studyResults = results.filter(r => r.mode === "study");
+
+  const buildRows = (res) => users.map(u => {
+    const ur = res.filter(r => r.userId === u.id);
+    const scores = ur.map(r => r.score);
+    return {
+      ...u,
+      attempts: ur.length,
+      avg:  ur.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null,
+      best: ur.length ? Math.max(...scores) : null,
+      last: ur.length ? ur[ur.length-1].date : null,
+      results: ur,
+    };
+  }).filter(u => activeTab === "all" || u.attempts > 0);
+
+  const examRows  = buildRows(examResults);
+  const studyRows = buildRows(studyResults);
+  const rows = activeTab === "exam" ? examRows : activeTab === "study" ? studyRows : buildRows(results);
+
+  // Summary stats
+  const allScores = (activeTab==="exam"?examResults:activeTab==="study"?studyResults:results).map(r=>r.score);
+  const avgAll  = allScores.length ? Math.round(allScores.reduce((a,b)=>a+b,0)/allScores.length) : 0;
+  const passing = allScores.filter(s=>s>=70).length;
+  const passRate = allScores.length ? Math.round(passing/allScores.length*100) : 0;
+
+  const TableView = ({ rows, mode }) => (
+    rows.length === 0
+      ? <div style={{ ...S.card, textAlign:"center", padding:40, color:T.ink3 }}>لا توجد نتائج بعد</div>
+      : <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-            <thead><tr style={{ background:T.surface }}>{["Student","University","Exams","Avg Score","Last Exam"].map(h=><th key={h} style={{ padding:"11px 14px", textAlign:"left", color:"#8C7B6E", fontWeight:600, borderBottom:`1px solid ${T.border}` }}>{h}</th>)}</tr></thead>
-            <tbody>{rows.map(u=>(
-              <tr key={u.id} style={{ borderBottom:"1px solid rgba(140,110,80,0.06)" }}>
-                <td style={{ padding:"11px 14px" }}><div style={{ fontWeight:700 }}>{u.name}</div><div style={{ color:"#8C7B6E", fontSize:11 }}>{u.email}</div></td>
-                <td style={{ padding:"11px 14px", color:"#8C7B6E" }}>{u.university||"—"}</td>
-                <td style={{ padding:"11px 14px", color:"#8C7B6E" }}>{u.exams}</td>
-                <td style={{ padding:"11px 14px" }}>{u.avg!==null?<span style={{ color:u.avg>=70?"#1A7A5E":u.avg>=60?"#C47A1E":"#B83B2A", fontWeight:700 }}>{u.avg}%</span>:<span style={{ color:T.ink3 }}>—</span>}</td>
-                <td style={{ padding:"11px 14px", color:"#8C7B6E" }}>{u.last||"—"}</td>
+            <thead>
+              <tr style={{ background:T.surface }}>
+                {["الطالب","الجامعة","المحاولات","أفضل درجة","متوسط الدرجات","آخر اختبار"].map(h=>(
+                  <th key={h} style={{ padding:"11px 14px", textAlign:"right", color:"#8C7B6E", fontWeight:600, borderBottom:`1px solid ${T.border}` }}>{h}</th>
+                ))}
               </tr>
-            ))}</tbody>
+            </thead>
+            <tbody>
+              {rows.map(u=>(
+                <tr key={u.id} style={{ borderBottom:`1px solid ${T.border}` }}>
+                  <td style={{ padding:"11px 14px" }}>
+                    <div style={{ fontWeight:700 }}>{u.name}</div>
+                    <div style={{ color:"#8C7B6E", fontSize:11 }}>{u.email}</div>
+                  </td>
+                  <td style={{ padding:"11px 14px", color:"#8C7B6E" }}>{u.university||"—"}</td>
+                  <td style={{ padding:"11px 14px", textAlign:"center" }}>
+                    <span style={{ background:"rgba(43,95,166,0.1)", color:"#2B5FA6", fontWeight:700, padding:"3px 10px", borderRadius:20, fontSize:12 }}>{u.attempts}</span>
+                  </td>
+                  <td style={{ padding:"11px 14px", textAlign:"center" }}>
+                    {u.best!==null
+                      ? <span style={{ background:scoreBg(u.best), color:scoreColor(u.best), fontWeight:800, padding:"3px 10px", borderRadius:20, fontSize:13 }}>{u.best}%</span>
+                      : <span style={{ color:T.ink3 }}>—</span>}
+                  </td>
+                  <td style={{ padding:"11px 14px", textAlign:"center" }}>
+                    {u.avg!==null
+                      ? <span style={{ color:scoreColor(u.avg), fontWeight:700, fontSize:13 }}>{u.avg}%</span>
+                      : <span style={{ color:T.ink3 }}>—</span>}
+                  </td>
+                  <td style={{ padding:"11px 14px", color:"#8C7B6E", fontSize:12 }}>{u.last||"—"}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
-      )}
+  );
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div>
+          <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>📈 التقارير</h1>
+          <p style={{ color:"#8C7B6E", margin:0, fontSize:13 }}>درجات الطلاب في الدورة والاختبار</p>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
+        {[
+          ["🎯 اختبارات", examResults.length, "#B83B2A"],
+          ["📚 دورات",    studyResults.length, "#1A7A5E"],
+          ["📊 متوسط عام", `${avgAll}%`,       "#2B5FA6"],
+          ["✅ نسبة النجاح", `${passRate}%`,    passRate>=70?"#1A7A5E":"#B83B2A"],
+        ].map(([label,val,color])=>(
+          <div key={label} style={{ ...S.card, textAlign:"center", border:`1px solid ${color}22` }}>
+            <div style={{ fontSize:20, fontWeight:800, color }}>{val}</div>
+            <div style={{ color:T.ink3, fontSize:11, marginTop:4 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tab selector */}
+      <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+        {[["exam","🎯 الاختبار الرسمي","#B83B2A"],["study","📚 دورة المراجعة","#1A7A5E"],["all","📋 الكل","#2B5FA6"]].map(([key,label,color])=>(
+          <button key={key} onClick={()=>setActiveTab(key)}
+            style={{ padding:"8px 18px", borderRadius:10, border:`2px solid ${activeTab===key?color:"rgba(140,110,80,0.15)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:activeTab===key?color+"15":"transparent", color:activeTab===key?color:"#8C7B6E" }}>
+            {label}
+            <span style={{ marginRight:6, background:activeTab===key?color+"22":"rgba(140,110,80,0.1)", color:activeTab===key?color:"#8C7B6E", fontSize:11, padding:"1px 7px", borderRadius:20 }}>
+              {key==="exam"?examResults.length:key==="study"?studyResults.length:results.length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <TableView rows={rows} mode={activeTab} />
     </div>
   );
 }
