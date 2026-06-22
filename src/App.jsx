@@ -97,6 +97,23 @@ const api = {
     const r = await fetch(`${API_URL}/banks/${bankId}/questions/${qid}`, { method:"DELETE" });
     return await r.json();
   },
+  // Results
+  saveResult: async (result) => {
+    try {
+      await fetch(`${API_URL}/results`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result)
+      });
+    } catch(e) { console.error("saveResult error:", e); }
+  },
+  getResults: async () => {
+    try {
+      const res = await fetch(`${API_URL}/results`);
+      if (!res.ok) throw new Error("API error");
+      return await res.json();
+    } catch(e) { console.error("getResults error:", e); return []; }
+  },
 };
 
 const DB = {
@@ -1266,7 +1283,7 @@ function AdminDashboard({ user, onLogout }) {
   const [tab, setTab] = useState("overview");
   const [questions, setQuestions] = useState(DB.getQuestions());
   const [users, setUsers] = useState(DB.getUsers());
-  const [results] = useState(DB.getResults());
+  const [results, setResults] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
   const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"bankcontrol",icon:"🗄️",label:"البنوك"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
@@ -1283,6 +1300,10 @@ function AdminDashboard({ user, onLogout }) {
         course ? api.getBankQuestionsByBankId(course.id).then(q=>q.length) : Promise.resolve(0),
         exam   ? api.getBankQuestionsByBankId(exam.id).then(q=>q.length)   : Promise.resolve(0),
       ]).then(([c, e]) => setBankStats({ course: c, exam: e }));
+    });
+    // Load results from DynamoDB
+    api.getResults().then(res => {
+      if (res.length > 0) { setResults(res); DB.saveResults(res); }
     });
   }, []);
 
@@ -1334,6 +1355,12 @@ function StudentDashboard({ user, onLogout }) {
   const [examA, setExamA] = useState({});
   const [mode, setMode] = useState("exam"); // "study" | "exam"
   const [myResults, setMyResults] = useState(DB.getResults().filter(r=>r.userId===user.id));
+  useEffect(() => {
+    api.getResults().then(all => {
+      const mine = all.filter(r => r.userId === user.id);
+      if (mine.length > 0) setMyResults(mine);
+    });
+  }, []);
   const [questions, setQuestions] = useState(DB.getQuestions());
   const [loadingQ, setLoadingQ] = useState(true);
   const studySettings = DB.getStudySettings();
@@ -1366,10 +1393,20 @@ function StudentDashboard({ user, onLogout }) {
     setMode(sessionMode); setExamQ(q); setScreen(sessionMode);
   };
 
-  const finishSession = (answers) => {
+  const finishSession = async (answers) => {
     const correct = examQ.filter(q => answers[q.id] === q.answer).length;
     const score = Math.round((correct / examQ.length) * 100);
-    const result = { userId:user.id, userName:user.name, date:new Date().toLocaleDateString(), score, correct, total:examQ.length, mode };
+    const result = {
+      userId: user.id,
+      userName: user.name,
+      timestamp: new Date().toISOString(),
+      date: new Date().toLocaleDateString("ar-SA"),
+      score, correct, total: examQ.length, mode,
+      id: `${user.id}_${Date.now()}`
+    };
+    // Save to DynamoDB
+    await api.saveResult(result);
+    // Also save locally for quick access
     const all = [...DB.getResults(), result];
     DB.saveResults(all);
     setMyResults(all.filter(r => r.userId === user.id));
