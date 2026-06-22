@@ -1185,13 +1185,16 @@ function AdminDashboard({ user, onLogout }) {
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   const [loadingQ, setLoadingQ] = useState(true);
+  const [bankStats, setBankStats] = useState({ course: 0, exam: 0 });
   useEffect(() => {
-    // Force fresh fetch from DynamoDB (bypass cache)
-    localStorage.removeItem("sple_questions_cache_time");
-    api.getQuestions().then(qs => { 
-      setQuestions(qs); 
-      DB.saveQuestions(qs); 
-      setLoadingQ(false);
+    api.getQuestions().then(qs => { setQuestions(qs); DB.saveQuestions(qs); setLoadingQ(false); });
+    api.getBanks().then(banks => {
+      const course = banks.find(b => b.activeForStudy);
+      const exam   = banks.find(b => b.activeForExam);
+      Promise.all([
+        course ? api.getBankQuestionsByBankId(course.id).then(q=>q.length) : Promise.resolve(0),
+        exam   ? api.getBankQuestionsByBankId(exam.id).then(q=>q.length)   : Promise.resolve(0),
+      ]).then(([c, e]) => setBankStats({ course: c, exam: e }));
     });
   }, []);
 
@@ -1215,7 +1218,7 @@ function AdminDashboard({ user, onLogout }) {
             <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>Overview</h1>
             <p style={{ color:"#8C7B6E", marginBottom:20 }}>Platform summary</p>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:20 }}>
-              {[["❓",questions.length,"Total Questions","#2B5FA6"],["📚",questions.filter(q=>q.assign==="study"||q.assign==="both").length,"Course Bank","#1A7A5E"],["🎯",questions.filter(q=>q.assign==="exam"||q.assign==="both").length,"Exam Bank","#B83B2A"],["📊",`${avg}%`,"Avg Score","#C47A1E"]].map(([icon,val,label,color])=>(
+              {[["📊",`${avg}%`,"Avg Score","#C47A1E"],["🎯",bankStats.exam,"Exam Bank","#B83B2A"],["📚",bankStats.course,"Course Bank","#1A7A5E"],["❓",bankStats.course+bankStats.exam,"Total Questions","#2B5FA6"]].map(([icon,val,label,color])=>(
                 <div key={label} style={{ background:T.bg2, border:`1px solid ${color}33`, borderRadius:14, padding:18 }}>
                   <div style={{ fontSize:24 }}>{icon}</div>
                   <div style={{ fontSize:28, fontWeight:800, color, marginTop:6 }}>{val}</div>
@@ -1255,13 +1258,22 @@ function StudentDashboard({ user, onLogout }) {
   const startSession = async (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
     const field = sessionMode === "study" ? "activeForStudy" : "activeForExam";
+    const label = sessionMode === "study" ? "دورة المراجعة" : "الاختبار الرسمي";
     let pool = [];
     try {
       const banks = await api.getBanks();
       const activeBank = banks.find(b => b[field]);
       if (activeBank) pool = await api.getBankQuestionsByBankId(activeBank.id);
     } catch(e) { console.error(e); }
-    if (pool.length < 10) pool = questions;
+    if (pool.length === 0) {
+      alert(`⚠️ لا توجد أسئلة في بنك ${label}.
+يرجى التواصل مع الإدارة.`);
+      return;
+    }
+    if (pool.length < (sessionMode==="study"?studySettings.totalQ:examSettings.totalQ)) {
+      alert(`⚠️ عدد الأسئلة في البنك (${pool.length}) أقل من المطلوب.
+سيتم استخدام جميع الأسئلة المتاحة.`);
+    }
     const q = buildExam(pool, settings);
     setMode(sessionMode); setExamQ(q); setScreen(sessionMode);
   };
