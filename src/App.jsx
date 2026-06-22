@@ -1111,7 +1111,7 @@ function AdminReports({ users, results }) {
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
             <thead>
               <tr style={{ background:T.surface }}>
-                {["الطالب","الجامعة","المحاولات","أفضل درجة","متوسط الدرجات","آخر اختبار"].map(h=>(
+                {["Student","University","Attempts","Best Score","Avg Score","Last Date"].map(h=>(
                   <th key={h} style={{ padding:"11px 14px", textAlign:"right", color:"#8C7B6E", fontWeight:600, borderBottom:`1px solid ${T.border}` }}>{h}</th>
                 ))}
               </tr>
@@ -1149,18 +1149,18 @@ function AdminReports({ users, results }) {
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
         <div>
-          <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>📈 التقارير</h1>
-          <p style={{ color:"#8C7B6E", margin:0, fontSize:13 }}>درجات الطلاب في الدورة والاختبار</p>
+          <h1 style={{ margin:"0 0 4px", fontSize:22, fontWeight:800 }}>📈 Reports</h1>
+          <p style={{ color:"#8C7B6E", margin:0, fontSize:13 }}>Student scores for Exam and Study Sessions</p>
         </div>
       </div>
 
       {/* Summary cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
         {[
-          ["🎯 اختبارات", examResults.length, "#B83B2A"],
-          ["📚 دورات",    studyResults.length, "#1A7A5E"],
-          ["📊 متوسط عام", `${avgAll}%`,       "#2B5FA6"],
-          ["✅ نسبة النجاح", `${passRate}%`,    passRate>=70?"#1A7A5E":"#B83B2A"],
+          ["🎯 Exams Taken", examResults.length, "#B83B2A"],
+          ["📚 Study Sessions", studyResults.length, "#1A7A5E"],
+          ["📊 Overall Avg", `${avgAll}%`,       "#2B5FA6"],
+          ["✅ Pass Rate", `${passRate}%`,    passRate>=70?"#1A7A5E":"#B83B2A"],
         ].map(([label,val,color])=>(
           <div key={label} style={{ ...S.card, textAlign:"center", border:`1px solid ${color}22` }}>
             <div style={{ fontSize:20, fontWeight:800, color }}>{val}</div>
@@ -1171,7 +1171,7 @@ function AdminReports({ users, results }) {
 
       {/* Tab selector */}
       <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-        {[["exam","🎯 الاختبار الرسمي","#B83B2A"],["study","📚 دورة المراجعة","#1A7A5E"],["all","📋 الكل","#2B5FA6"]].map(([key,label,color])=>(
+        {[["exam","🎯 SCHS Exam","#B83B2A"],["study","📚 Study Session","#1A7A5E"],["all","📋 All","#2B5FA6"]].map(([key,label,color])=>(
           <button key={key} onClick={()=>setActiveTab(key)}
             style={{ padding:"8px 18px", borderRadius:10, border:`2px solid ${activeTab===key?color:"rgba(140,110,80,0.15)"}`, cursor:"pointer", fontWeight:700, fontSize:13, background:activeTab===key?color+"15":"transparent", color:activeTab===key?color:"#8C7B6E" }}>
             {label}
@@ -1286,7 +1286,7 @@ function AdminDashboard({ user, onLogout }) {
   const [results, setResults] = useState(DB.getResults());
   const saveQ = q => { DB.saveQuestions(q); setQuestions(q); };
   const saveU = u => { DB.saveUsers(u); setUsers(u); };
-  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"bankcontrol",icon:"🗄️",label:"البنوك"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Exam Settings"}];
+  const TABS = [{id:"overview",icon:"📊",label:"Overview"},{id:"bankcontrol",icon:"🗄️",label:"Banks"},{id:"students",icon:"🎓",label:"Students"},{id:"reports",icon:"📈",label:"Reports"},{id:"settings",icon:"⚙️",label:"Settings"}];
   const avg = results.length?Math.round(results.reduce((a,r)=>a+r.score,0)/results.length):0;
 
   const [loadingQ, setLoadingQ] = useState(true);
@@ -1313,7 +1313,7 @@ function AdminDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex" }}>
       <div style={{ width:210, background:T.bg2, borderRight:`1px solid ${T.border}`, padding:18, display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
-        <div style={{ marginBottom:20 }}><div style={{ fontSize:17, fontWeight:800 }}>💊 SPLE</div><div style={{ color:"#7C4BA0", fontSize:10, fontWeight:700 }}>ADMIN PANEL</div></div>
+        <div style={{ marginBottom:20 }}><div style={{ fontSize:17, fontWeight:800 }}>💊 SPLE</div><div style={{ color:"#7C4BA0", fontSize:10, fontWeight:700, letterSpacing:"0.08em" }}>ADMIN PANEL</div></div>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{ background:tab===t.id?"rgba(139,92,246,0.15)":"transparent", border:tab===t.id?"1px solid rgba(139,92,246,0.3)":"1px solid transparent", borderRadius:9, padding:"9px 12px", cursor:"pointer", textAlign:"left", color:tab===t.id?"#9B6DBF":"#8C7B6E", fontSize:13, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
             {t.icon} {t.label} {t.badge&&<span style={{ background:"#C47A1E22",color:"#C47A1E",fontSize:9,padding:"1px 5px",borderRadius:6,marginLeft:"auto" }}>{t.badge}</span>}
@@ -1434,93 +1434,144 @@ function StudentDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
       {/* Header */}
-      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}><span style={{ fontSize:20 }}>💊</span><div><div style={{ fontWeight:800 }}>SPLE Platform</div><div style={{ color:"#8C7B6E", fontSize:11 }}>Student Portal</div></div></div>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ textAlign:"right" }}><div style={{ fontWeight:700, fontSize:13 }}>{user.name}</div><div style={{ color:"#8C7B6E", fontSize:11 }}>{user.university||user.email}</div></div>
-          <button onClick={onLogout} style={{ ...S.ghost, padding:"7px 12px" }}>Logout</button>
+      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"14px 28px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:24 }}>💊</span>
+          <div>
+            <div style={{ fontWeight:800, fontSize:16 }}>SPLE Platform</div>
+            <div style={{ color:"#8C7B6E", fontSize:11, letterSpacing:"0.05em" }}>Saudi Pharmacist Licensure Exam</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontWeight:700, fontSize:13 }}>{user.name}</div>
+            <div style={{ color:"#8C7B6E", fontSize:11 }}>{user.university||user.email}</div>
+          </div>
+          <button onClick={onLogout} style={{ ...S.ghost, padding:"7px 14px", fontSize:12 }}>Sign Out</button>
         </div>
       </div>
 
-      <div style={{ maxWidth:720, margin:"0 auto", padding:24 }}>
-        {/* Stats - Exam */}
-        <div style={{ ...S.card, marginBottom:14, border:"1.5px solid rgba(184,59,42,0.2)", background:"rgba(184,59,42,0.03)" }}>
-          <div style={{ fontWeight:800, fontSize:14, color:"#B83B2A", marginBottom:12 }}>🎯 إحصائيات الاختبار الرسمي</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-            {[["📝",examResults.length,"محاولات","#B83B2A"],["📊",`${examAvg}%`,"متوسط الدرجات","#2B5FA6"],["🏆",`${examBest}%`,"أفضل درجة","#C47A1E"]].map(([icon,val,label,color])=>(
-              <div key={label} style={{ background:T.bg2, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
-                <div style={{ fontSize:18 }}>{icon}</div>
-                <div style={{ fontSize:22, fontWeight:800, color, marginTop:4 }}>{val}</div>
-                <div style={{ color:"#8C7B6E", fontSize:11, marginTop:2 }}>{label}</div>
-              </div>
-            ))}
+      <div style={{ maxWidth:760, margin:"0 auto", padding:"28px 24px" }}>
+
+        {/* ── Welcome Banner ── */}
+        <div style={{ background:"linear-gradient(135deg,#2B5FA6 0%,#1A4A8A 100%)", borderRadius:16, padding:"20px 24px", marginBottom:24, color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:13, opacity:0.8, marginBottom:4 }}>Welcome back 👋</div>
+            <div style={{ fontWeight:800, fontSize:20 }}>{user.name}</div>
+            <div style={{ fontSize:12, opacity:0.7, marginTop:2 }}>{user.university || "SPLE Candidate"}</div>
+          </div>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:32, fontWeight:900, color:"#FFD700" }}>{examBest > 0 ? examBest+"%" : "—"}</div>
+            <div style={{ fontSize:11, opacity:0.8 }}>Personal Best</div>
           </div>
         </div>
 
-        {/* Stats - Study */}
-        <div style={{ ...S.card, marginBottom:20, border:"1.5px solid rgba(26,122,94,0.2)", background:"rgba(26,122,94,0.03)" }}>
-          <div style={{ fontWeight:800, fontSize:14, color:"#1A7A5E", marginBottom:12 }}>📚 إحصائيات دورة المراجعة</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-            {[["📝",studyResults.length,"محاولات","#1A7A5E"],["📊",`${studyAvg}%`,"متوسط الدرجات","#2B5FA6"],["🏆",`${studyBest}%`,"أفضل درجة","#C47A1E"]].map(([icon,val,label,color])=>(
-              <div key={label} style={{ background:T.bg2, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
-                <div style={{ fontSize:18 }}>{icon}</div>
-                <div style={{ fontSize:22, fontWeight:800, color, marginTop:4 }}>{val}</div>
-                <div style={{ color:"#8C7B6E", fontSize:11, marginTop:2 }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Mode cards */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-
-          {/* Study Session */}
-          <div style={{ ...S.card, border:"2px solid rgba(16,185,129,0.4)", background:"rgba(16,185,129,0.04)", display:"flex", flexDirection:"column" }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>📚</div>
-            <div style={{ fontWeight:800, fontSize:16, color:"#1A7A5E", marginBottom:6 }}>وضع الدراسة</div>
-            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:10, lineHeight:1.7, flex:1 }}>
-              تدرّب مع <strong>إجابة فورية وشرح</strong> بعد كل سؤال — مثالي للمراجعة والتعلم
-            </div>
-            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {studySettings.totalQ} سؤال</span>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>✅ شرح فوري</span>
-              <span style={{ background:"rgba(16,185,129,0.12)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏮️ رجوع للسؤال</span>
-            </div>
-            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:12, fontSize:14 }}>ابدأ الدراسة ←</button>
-          </div>
-
+        {/* ── Practice Mode Cards ── */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
           {/* Exam Simulator */}
-          <div style={{ ...S.card, border:"2px solid rgba(184,59,42,0.4)", background:"rgba(184,59,42,0.04)", display:"flex", flexDirection:"column" }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>🎯</div>
-            <div style={{ fontWeight:800, fontSize:16, color:"#B83B2A", marginBottom:6 }}>محاكي اختبار الهيئة</div>
-            <div style={{ color:"#8C7B6E", fontSize:12, marginBottom:10, lineHeight:1.7, flex:1 }}>
-              بيئة <strong>مطابقة لاختبار SCHS</strong> — بدون شرح، وقت محدد، نتيجة في النهاية
+          <div style={{ ...S.card, border:"2px solid rgba(184,59,42,0.35)", background:"rgba(184,59,42,0.03)", display:"flex", flexDirection:"column", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:-10, right:-10, fontSize:60, opacity:0.06 }}>🎯</div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+              <span style={{ fontSize:24 }}>🎯</span>
+              <div>
+                <div style={{ fontWeight:800, fontSize:15, color:"#B83B2A" }}>SCHS Exam Simulator</div>
+                <div style={{ fontSize:11, color:"#8C7B6E" }}>Timed · No feedback · Real conditions</div>
+              </div>
             </div>
             <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
-              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>📝 {examSettings.totalQ} سؤال</span>
-              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>⏱️ {examSettings.timeMins} دقيقة</span>
-              <span style={{ background:"rgba(184,59,42,0.10)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:20 }}>🔒 بدون شرح</span>
+              <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>📝 {examSettings.totalQ} Questions</span>
+              <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>⏱ {examSettings.timeMins} min</span>
+              <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>🔒 No Hints</span>
             </div>
-            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:12, fontSize:14 }}>ابدأ الاختبار ←</button>
+            <div style={{ display:"flex", gap:8, marginTop:"auto", alignItems:"center" }}>
+              <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), flex:1, padding:"11px", fontSize:13, fontWeight:700 }}>Start Exam →</button>
+              <div style={{ textAlign:"center", minWidth:44 }}>
+                <div style={{ fontWeight:800, fontSize:15, color:"#B83B2A" }}>{examResults.length}</div>
+                <div style={{ fontSize:10, color:"#8C7B6E" }}>taken</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Study Mode */}
+          <div style={{ ...S.card, border:"2px solid rgba(26,122,94,0.35)", background:"rgba(26,122,94,0.03)", display:"flex", flexDirection:"column", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:-10, right:-10, fontSize:60, opacity:0.06 }}>📚</div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+              <span style={{ fontSize:24 }}>📚</span>
+              <div>
+                <div style={{ fontWeight:800, fontSize:15, color:"#1A7A5E" }}>Study Session</div>
+                <div style={{ fontSize:11, color:"#8C7B6E" }}>Instant feedback · Explanations</div>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+              <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
+              <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>✅ Instant Answer</span>
+              <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>💡 Explanation</span>
+            </div>
+            <div style={{ display:"flex", gap:8, marginTop:"auto", alignItems:"center" }}>
+              <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), flex:1, padding:"11px", fontSize:13, fontWeight:700 }}>Start Study →</button>
+              <div style={{ textAlign:"center", minWidth:44 }}>
+                <div style={{ fontWeight:800, fontSize:15, color:"#1A7A5E" }}>{studyResults.length}</div>
+                <div style={{ fontSize:10, color:"#8C7B6E" }}>sessions</div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Study Materials */}
-        <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.3)", background:"rgba(139,92,246,0.03)", display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>
-          <div style={{ fontSize:32, flexShrink:0 }}>📖</div>
+        <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.25)", background:"rgba(139,92,246,0.02)", display:"flex", alignItems:"center", gap:16, marginBottom:24, padding:"14px 18px" }}>
+          <span style={{ fontSize:28, flexShrink:0 }}>📖</span>
           <div style={{ flex:1 }}>
-            <div style={{ fontWeight:800, fontSize:14, color:"#7C4BA0" }}>مواد الدراسة</div>
-            <div style={{ color:"#8C7B6E", fontSize:12, marginTop:2 }}>23 درساً شاملاً مع نقاط مراجعة وجداول مرجعية</div>
+            <div style={{ fontWeight:700, fontSize:13, color:"#7C4BA0" }}>Study Materials</div>
+            <div style={{ color:"#8C7B6E", fontSize:12, marginTop:2 }}>23 comprehensive lessons with key points and reference tables</div>
           </div>
-          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"9px 16px", fontSize:13, flexShrink:0 }}>تصفح ←</button>
+          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"8px 16px", fontSize:12, flexShrink:0 }}>Browse →</button>
         </div>
 
-        {/* History */}
+        {/* ── Performance Stats ── */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontWeight:800, fontSize:15, marginBottom:12 }}>📊 Performance Overview</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+
+            {/* Exam Stats */}
+            <div style={{ ...S.card, border:"1.5px solid rgba(184,59,42,0.2)", background:"rgba(184,59,42,0.02)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:12 }}>
+                <span>🎯</span>
+                <span style={{ fontWeight:700, fontSize:12, color:"#B83B2A" }}>SCHS Exam</span>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                {[[examResults.length,"Attempts","#B83B2A"],[`${examAvg}%`,"Avg Score","#2B5FA6"],[`${examBest}%`,"Best","#C47A1E"]].map(([val,label,color])=>(
+                  <div key={label} style={{ textAlign:"center" }}>
+                    <div style={{ fontWeight:800, fontSize:18, color }}>{val}</div>
+                    <div style={{ color:"#8C7B6E", fontSize:10, marginTop:2 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Study Stats */}
+            <div style={{ ...S.card, border:"1.5px solid rgba(26,122,94,0.2)", background:"rgba(26,122,94,0.02)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:12 }}>
+                <span>📚</span>
+                <span style={{ fontWeight:700, fontSize:12, color:"#1A7A5E" }}>Study Sessions</span>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                {[[studyResults.length,"Sessions","#1A7A5E"],[`${studyAvg}%`,"Avg Score","#2B5FA6"],[`${studyBest}%`,"Best","#C47A1E"]].map(([val,label,color])=>(
+                  <div key={label} style={{ textAlign:"center" }}>
+                    <div style={{ fontWeight:800, fontSize:18, color }}>{val}</div>
+                    <div style={{ color:"#8C7B6E", fontSize:10, marginTop:2 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── History ── */}
         <div style={S.card}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-            <div style={{ fontWeight:800, fontSize:15 }}>📋 السجل</div>
+            <div style={{ fontWeight:800, fontSize:15 }}>📋 History</div>
             <div style={{ display:"flex", gap:6 }}>
-              {[["exam","🎯 الاختبار","#B83B2A"],["study","📚 الدورة","#1A7A5E"]].map(([key,label,color])=>(
+              {[["exam","🎯 Exam","#B83B2A"],["study","📚 Study","#1A7A5E"]].map(([key,label,color])=>(
                 <button key={key} onClick={()=>setHistTab(key)}
                   style={{ padding:"5px 12px", borderRadius:8, border:`1.5px solid ${histTab===key?color:"rgba(140,110,80,0.2)"}`, cursor:"pointer", fontSize:12, fontWeight:700, background:histTab===key?color:"transparent", color:histTab===key?"#fff":color }}>
                   {label}
@@ -1529,20 +1580,36 @@ function StudentDashboard({ user, onLogout }) {
             </div>
           </div>
           {(histTab==="exam"?examResults:studyResults).length===0
-            ? <p style={{ color:T.ink3, textAlign:"center", padding:"20px 0" }}>لا توجد نتائج بعد</p>
+            ? <div style={{ textAlign:"center", padding:"24px 0", color:T.ink3 }}>
+                <div style={{ fontSize:32, marginBottom:8 }}>📭</div>
+                <div style={{ fontWeight:600 }}>No {histTab === "exam" ? "exams" : "study sessions"} yet</div>
+                <div style={{ fontSize:12, marginTop:4 }}>Complete a {histTab === "exam" ? "exam" : "study session"} to see your history</div>
+              </div>
             : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {[...(histTab==="exam"?examResults:studyResults)].reverse().slice(0,10).map((r,i)=>(
-                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:T.bg2, borderRadius:10, padding:"10px 14px" }}>
-                    <div>
-                      <div style={{ fontWeight:700 }}>{r.correct}/{r.total} إجابة صحيحة</div>
-                      <div style={{ color:"#8C7B6E", fontSize:12 }}>{r.date}</div>
+                {[...(histTab==="exam"?examResults:studyResults)].reverse().slice(0,10).map((r,i)=>{
+                  const pass = r.score >= 70;
+                  return (
+                    <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:T.bg2, borderRadius:10, padding:"11px 14px", border:`1px solid ${pass?"rgba(26,122,94,0.15)":"rgba(184,59,42,0.12)"}` }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <div style={{ width:36, height:36, borderRadius:10, background:pass?"rgba(26,122,94,0.12)":"rgba(184,59,42,0.08)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>
+                          {pass?"✅":"❌"}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight:700, fontSize:13 }}>{r.correct}/{r.total} Correct</div>
+                          <div style={{ color:"#8C7B6E", fontSize:11 }}>{r.date}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:22, fontWeight:800, color:pass?"#1A7A5E":"#B83B2A" }}>{r.score}%</div>
+                        <div style={{ fontSize:10, color:"#8C7B6E" }}>{pass?"Passed":"Below 70%"}</div>
+                      </div>
                     </div>
-                    <div style={{ fontSize:22, fontWeight:800, color:r.score>=70?"#1A7A5E":r.score>=60?"#C47A1E":"#B83B2A" }}>{r.score}%</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
           }
         </div>
+
       </div>
     </div>
   );
