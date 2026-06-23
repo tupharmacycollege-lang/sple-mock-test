@@ -1365,21 +1365,26 @@ function AdminDashboard({ user, onLogout }) {
 
 // ===================== STUDENT =====================
 function StudentDashboard({ user, onLogout }) {
-  const [screen, setScreen] = useState("home"); // home | study | exam | results
+  // All useState hooks first
+  const [screen, setScreen] = useState("home");
   const [examQ, setExamQ] = useState([]);
   const [examA, setExamA] = useState({});
-  const [mode, setMode] = useState("exam"); // "study" | "exam"
+  const [mode, setMode] = useState("exam");
   const [myResults, setMyResults] = useState(DB.getResults().filter(r=>r.userId===user.id));
+  const [questions, setQuestions] = useState(DB.getQuestions());
+  const [loadingQ, setLoadingQ] = useState(true);
+  const [histTab, setHistTab] = useState("exam");
+
+  const studySettings = DB.getStudySettings();
+  const examSettings = DB.getExamSettings();
+
+  // All useEffect hooks after
   useEffect(() => {
     api.getResults().then(all => {
       const mine = all.filter(r => r.userId === user.id);
       if (mine.length > 0) setMyResults(mine);
     });
   }, []);
-  const [questions, setQuestions] = useState(DB.getQuestions());
-  const [loadingQ, setLoadingQ] = useState(true);
-  const studySettings = DB.getStudySettings();
-  const examSettings = DB.getExamSettings();
 
   useEffect(() => {
     api.getQuestions().then(qs => { setQuestions(qs); setLoadingQ(false); });
@@ -1440,7 +1445,6 @@ function StudentDashboard({ user, onLogout }) {
   const studyAvg = studyResults.length ? Math.round(studyResults.reduce((a,r)=>a+r.score,0)/studyResults.length) : 0;
   const examBest  = examResults.length  ? Math.max(...examResults.map(r=>r.score))  : 0;
   const studyBest = studyResults.length ? Math.max(...studyResults.map(r=>r.score)) : 0;
-  const [histTab, setHistTab] = useState("exam");
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
