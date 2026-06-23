@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 
 const API_URL = "https://y0ww5f6rnf.execute-api.eu-north-1.amazonaws.com/prod2";
@@ -2393,7 +2393,17 @@ function StudyScreen({ questions, onFinish, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showExp, setShowExp] = useState(false);
-  const q = questions[cur];
+  const q = questions && questions.length > 0 ? questions[cur] : null;
+  if (!questions || questions.length === 0 || !q) {
+    return (
+      <div style={{ minHeight:"100vh", background:T.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
+        <div style={{ fontSize:48 }}>📭</div>
+        <div style={{ fontWeight:700, fontSize:18 }}>No questions available</div>
+        <div style={{ color:T.ink3 }}>Please contact administration</div>
+        <button onClick={onHome} style={{ ...S.btn("#2B5FA6"), marginTop:10 }}>🏠 Back to Home</button>
+      </div>
+    );
+  }
   const answered = answers[q.id] !== undefined;
   const correct = answers[q.id] === q.answer;
   const col = SC[q.section] || { accent:"#1A7A5E", bg:T.bg };
@@ -2444,14 +2454,6 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [secsLeft, setSecsLeft] = useState((timeMins || 120) * 60);
-  if (!questions || questions.length === 0) {
-    return <div style={{ minHeight:"100vh", background:T.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
-      <div style={{ fontSize:48 }}>📭</div>
-      <div style={{ fontWeight:700, fontSize:18 }}>No questions available</div>
-      <div style={{ color:T.ink3 }}>Please contact administration</div>
-      <button onClick={onHome} style={{ ...S.btn("#2B5FA6"), marginTop:10 }}>🏠 Back to Home</button>
-    </div>;
-  }
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -2470,7 +2472,18 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const timePct = secsLeft / ((timeMins || 120) * 60);
   const timerColor = timePct > 0.25 ? "#1A7A5E" : timePct > 0.1 ? "#C47A1E" : "#B83B2A";
 
-  const q = questions[cur];
+  // Safety: render empty state if no questions
+  const q = questions && questions.length > 0 ? questions[cur] : null;
+  if (!questions || questions.length === 0 || !q) {
+    return (
+      <div style={{ minHeight:"100vh", background:T.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
+        <div style={{ fontSize:48 }}>📭</div>
+        <div style={{ fontWeight:700, fontSize:18 }}>No questions available</div>
+        <div style={{ color:T.ink3 }}>Please contact administration</div>
+        <button onClick={onHome} style={{ ...S.btn("#2B5FA6"), marginTop:10 }}>🏠 Back to Home</button>
+      </div>
+    );
+  }
   const answered = answers[q.id] !== undefined;
   const col = SC[q.section] || { accent:"#2B5FA6", bg:T.bg };
   const diffCol = { "سهل":"#1A7A5E", "متوسط":"#C47A1E", "صعب":"#B83B2A" };
