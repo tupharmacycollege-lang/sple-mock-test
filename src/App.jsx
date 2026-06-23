@@ -183,24 +183,35 @@ const SC = {
 
 // Build a SCHS-blueprint-aligned exam with difficulty distribution
 function buildExam(allQuestions, settings) {
+  if (!allQuestions || allQuestions.length === 0) return [];
   const { totalQ, diffPct } = settings;
   const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+  // Normalize difficulty: convert English to Arabic
+  const diffNormalize = (d) => {
+    const map = { "easy":"سهل", "medium":"متوسط", "hard":"صعب" };
+    return map[String(d||"").toLowerCase()] || d;
+  };
+  const normalized = allQuestions.map(q => ({ ...q, difficulty: diffNormalize(q.difficulty) }));
   const result = [];
   SECTIONS.forEach(sec => {
     const bp = BLUEPRINT[sec];
     const secCount = Math.round(totalQ * bp.pct / 100);
-    const pool = allQuestions.filter(q => q.section === sec);
+    const pool = normalized.filter(q => q.section === sec);
     DIFFICULTIES.forEach(diff => {
       const need = Math.round(secCount * (diffPct[diff] || 33) / 100);
       const diffPool = shuffle(pool.filter(q => q.difficulty === diff));
       result.push(...diffPool.slice(0, need));
     });
   });
-  const chosen = shuffle(result).slice(0, totalQ);
+  let chosen = shuffle(result).slice(0, totalQ);
   if (chosen.length < totalQ) {
     const usedIds = new Set(chosen.map(q => q.id));
-    const remaining = shuffle(allQuestions.filter(q => !usedIds.has(q.id)));
+    const remaining = shuffle(normalized.filter(q => !usedIds.has(q.id)));
     chosen.push(...remaining.slice(0, totalQ - chosen.length));
+  }
+  // Last resort fallback if section/difficulty don't match anything
+  if (chosen.length === 0) {
+    chosen = shuffle(normalized).slice(0, totalQ);
   }
   return shuffle(chosen);
 }
@@ -2433,6 +2444,14 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [secsLeft, setSecsLeft] = useState((timeMins || 120) * 60);
+  if (!questions || questions.length === 0) {
+    return <div style={{ minHeight:"100vh", background:T.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
+      <div style={{ fontSize:48 }}>📭</div>
+      <div style={{ fontWeight:700, fontSize:18 }}>No questions available</div>
+      <div style={{ color:T.ink3 }}>Please contact administration</div>
+      <button onClick={onHome} style={{ ...S.btn("#2B5FA6"), marginTop:10 }}>🏠 Back to Home</button>
+    </div>;
+  }
 
   useEffect(() => {
     const t = setInterval(() => {
