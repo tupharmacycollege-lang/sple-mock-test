@@ -1302,13 +1302,8 @@ function AdminDashboard({ user, onLogout }) {
     api.getBanks().then(banks => {
       const course = banks.find(b => b.activeForStudy);
       const exam   = banks.find(b => b.activeForExam);
-      // Show count from bank registry first (fast)
+      // Use stored count from sple-banks (fast, no scan)
       setBankStats({ course: course?.count || 0, exam: exam?.count || 0 });
-      // Then load accurate counts
-      Promise.all([
-        course ? api.getBankQuestionsByBankId(course.id).then(q=>q.length).catch(()=>course?.count||0) : Promise.resolve(0),
-        exam   ? api.getBankQuestionsByBankId(exam.id).then(q=>q.length).catch(()=>exam?.count||0)     : Promise.resolve(0),
-      ]).then(([c, e]) => setBankStats({ course: c, exam: e }));
     }).catch(e => console.error("getBanks error:", e));
     // Load results from DynamoDB
     api.getResults().then(res => {
@@ -1382,21 +1377,20 @@ function StudentDashboard({ user, onLogout }) {
   const startSession = async (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
     const field = sessionMode === "study" ? "activeForStudy" : "activeForExam";
-    const label = sessionMode === "study" ? "دورة المراجعة" : "الاختبار الرسمي";
+    const label = sessionMode === "study" ? "Study Session" : "SCHS Exam";
     let pool = [];
     try {
       const banks = await api.getBanks();
       const activeBank = banks.find(b => b[field]);
-      if (activeBank) pool = await api.getBankQuestionsByBankId(activeBank.id);
+      if (!activeBank) {
+        alert("No active bank configured for " + label + ". Please contact administration.");
+        return;
+      }
+      pool = await api.getBankQuestionsByBankId(activeBank.id);
     } catch(e) { console.error(e); }
     if (pool.length === 0) {
-      alert(`⚠️ لا توجد أسئلة في بنك ${label}.
-يرجى التواصل مع الإدارة.`);
+      alert("No questions found in " + label + " bank. Please contact administration.");
       return;
-    }
-    if (pool.length < (sessionMode==="study"?studySettings.totalQ:examSettings.totalQ)) {
-      alert(`⚠️ عدد الأسئلة في البنك (${pool.length}) أقل من المطلوب.
-سيتم استخدام جميع الأسئلة المتاحة.`);
     }
     const q = buildExam(pool, settings);
     setMode(sessionMode); setExamQ(q); setScreen(sessionMode);
