@@ -355,7 +355,13 @@ function parseExcelFile(file) {
           "Social/Behavioral/Administrative Sciences":"Social/Behavioral/Administrative Sciences",
           "Clinical Sciences":"Clinical Sciences",
         };
-        const mapped = rows.filter(r => (r.question||r.Question) && (r.option_a||r.A)).map((r,i) => {
+        console.log("Excel rows:", rows.length, "First row keys:", rows[0] ? Object.keys(rows[0]) : "no rows");
+        console.log("Sample row:", rows[0]);
+        const mapped = rows.filter(r => {
+          const hasQ = (r.question||r.Question||"").toString().trim().length > 0;
+          const hasOpt = (r.option_a||r.A||"").toString().trim().length > 0;
+          return hasQ && hasOpt;
+        }).map((r,i) => {
           const isOrion = r.A !== undefined && r.option_a === undefined;
           const question = String(r.question || r.Question || "");
           const options = isOrion ? [String(r.A),String(r.B),String(r.C),String(r.D)] : [String(r.option_a),String(r.option_b),String(r.option_c),String(r.option_d)];
