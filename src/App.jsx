@@ -233,15 +233,30 @@ function LoginScreen({ onLogin }) {
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
 
-  const login = () => {
+  const [logging, setLogging] = useState(false);
+  const login = async () => {
     setErr("");
     if (tab === "admin") {
       if (email === ADMIN.email && pass === ADMIN.password) onLogin({ role:"admin", email, name:"Administrator" });
       else setErr("Invalid admin credentials.");
     } else {
-      const u = DB.getUsers().find(u => u.email===email && u.password===pass);
-      if (u) onLogin({ role:"student", ...u });
-      else setErr("Account not found or wrong password.");
+      setLogging(true);
+      try {
+        const res = await fetch(`${API_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password: pass })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          onLogin({ role:"student", id: data.user.userId, ...data.user });
+        } else {
+          setErr(data.error || "Account not found or wrong password.");
+        }
+      } catch(e) {
+        setErr("Connection error. Please try again.");
+      }
+      setLogging(false);
     }
   };
 
@@ -264,7 +279,7 @@ function LoginScreen({ onLogin }) {
           <div style={{ marginBottom:14 }}><label style={S.label}>Email</label><input style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={tab==="admin"?"admin123":"student@email.com"} onKeyDown={e=>e.key==="Enter"&&login()} /></div>
           <div style={{ marginBottom:18 }}><label style={S.label}>Password</label><input style={S.input} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&login()} /></div>
           {err && <div style={{ background:"rgba(184,59,42,0.08)", border:"1px solid rgba(184,59,42,0.30)", borderRadius:8, padding:"9px 14px", color:"#B83B2A", fontSize:13, marginBottom:14 }}>⚠️ {err}</div>}
-          <button style={{ ...S.btn(tab==="admin"?"#7C4BA0":"#2B5FA6"), width:"100%", padding:13 }} onClick={login}>{tab==="admin"?"Sign in as Admin":"Sign in as Student"}</button>
+          <button style={{ ...S.btn(tab==="admin"?"#7C4BA0":"#2B5FA6"), width:"100%", padding:13, opacity:logging?0.7:1 }} onClick={login} disabled={logging}>{logging?"⏳ جاري التحقق...":tab==="admin"?"Sign in as Admin":"Sign in as Student"}</button>
         </div>
         {tab==="admin" && <p style={{ textAlign:"center", color:"#4A3F35", fontSize:11, marginTop:10 }}>admin123 / 123456</p>}
       </div>
@@ -1039,9 +1054,16 @@ function AdminStudents({ users, onChange }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name:"", email:"", password:"", university:"" });
   const [err, setErr] = useState("");
-  const add = () => {
+  const add = async () => {
     if (!form.name||!form.email||!form.password) { setErr("All fields required."); return; }
     if (users.find(u=>u.email===form.email)) { setErr("Email already exists."); return; }
+    try {
+      await fetch(`${API_URL}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, name: form.name, password: form.password, university: form.university, role: "student" })
+      });
+    } catch(e) { console.error("Failed to save to API:", e); }
     onChange([...users,{...form,id:"u"+Date.now(),joinDate:new Date().toLocaleDateString()}]);
     setForm({name:"",email:"",password:"",university:""}); setShowForm(false); setErr("");
   };
