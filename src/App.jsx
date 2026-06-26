@@ -1463,25 +1463,33 @@ function StudentDashboard({ user, onLogout }) {
     api.getQuestions().then(qs => { setQuestions(qs); setLoadingQ(false); });
   }, []);
 
+  const [starting, setStarting] = useState(false);
+  const [startingMode, setStartingMode] = useState("");
+
   const startSession = async (sessionMode) => {
     const settings = sessionMode === "study" ? studySettings : examSettings;
     const field = sessionMode === "study" ? "activeForStudy" : "activeForExam";
     const label = sessionMode === "study" ? "Study Session" : "SCHS Exam";
+    setStarting(true);
+    setStartingMode(sessionMode);
     let pool = [];
     try {
       const banks = await api.getBanks();
       const activeBank = banks.find(b => b[field]);
       if (!activeBank) {
+        setStarting(false);
         alert("No active bank configured for " + label + ". Please contact administration.");
         return;
       }
       pool = await api.getBankQuestionsByBankId(activeBank.id);
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); setStarting(false); return; }
     if (pool.length === 0) {
+      setStarting(false);
       alert("No questions found in " + label + " bank. Please contact administration.");
       return;
     }
     const q = buildExam(pool, settings);
+    setStarting(false);
     setMode(sessionMode); setExamQ(q); setScreen(sessionMode);
   };
 
@@ -1506,7 +1514,32 @@ function StudentDashboard({ user, onLogout }) {
     setScreen("results");
   };
 
-  if (loadingQ && questions.length === 0) return <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}><div style={{ fontSize:36 }}>⏳</div><div style={{ color:T.ink2, fontWeight:700 }}>جاري تحميل الأسئلة...</div></div>;
+  if (loadingQ && questions.length === 0) return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
+      <div style={{ fontSize:48 }}>⏳</div>
+      <div style={{ color:T.ink2, fontWeight:700, fontSize:16 }}>جاري تحميل الأسئلة...</div>
+    </div>
+  );
+  if (starting) return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:20 }}>
+      <div style={{ fontSize:72, animation:"spin 2s linear infinite" }}>⏳</div>
+      <div style={{ fontWeight:800, fontSize:20, color:startingMode==="exam"?"#B83B2A":"#1A7A5E" }}>
+        {startingMode==="exam" ? "🎯 جاري تحضير الاختبار..." : "📚 جاري تحضير الدورة..."}
+      </div>
+      <div style={{ color:T.ink3, fontSize:14, textAlign:"center", maxWidth:280 }}>
+        {startingMode==="exam" ? "يتم تجهيز أسئلتك حسب معايير SCHS" : "يتم اختيار الأسئلة المناسبة لمستواك"}
+      </div>
+      <div style={{ display:"flex", gap:8, marginTop:8 }}>
+        {[0,1,2].map(i=>(
+          <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:startingMode==="exam"?"#B83B2A":"#1A7A5E", animation:`pulse 1.2s ease-in-out ${i*0.4}s infinite` }} />
+        ))}
+      </div>
+      <style>{`
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes pulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+      `}</style>
+    </div>
+  );
   if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} allQuestions={questions} />;
   if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} onHome={()=>setScreen("home")} />;
   if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} onHome={()=>setScreen("home")} />;
@@ -2526,11 +2559,11 @@ function StudyScreen({ questions, onFinish, onHome }) {
               }
               return (
                 <button key={i} onClick={()=>{ if(!answered){ setAnswers(p=>({...p,[q.id]:i})); setShowExp(true); }}}
-                  style={{ background:bg, border, borderRadius:10, padding:"12px 14px", cursor:answered?"default":"pointer", textAlign:"left", color:c, fontSize:14, display:"flex", alignItems:"center", gap:10, transition:"all 0.15s" }}>
+                  style={{ background:bg, border, borderRadius:10, padding:"12px 14px", cursor:answered?"default":"pointer", textAlign:"left", color:c, fontSize:14, display:"flex", alignItems:"center", gap:10, transition:"all 0.15s", direction:"ltr" }}>
                   <span style={{ width:28, height:28, borderRadius:8, background:iconBg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0, color:iconC }}>
                     {answered && i===q.answer ? "✓" : answered && i===answers[q.id] ? "✗" : ["A","B","C","D"][i]}
                   </span>
-                  <span style={{ flex:1, lineHeight:1.4 }}>{opt}</span>
+                  <span style={{ flex:1, lineHeight:1.4, textAlign:"left" }}>{opt}</span>
                 </button>
               );
             })}
@@ -2636,15 +2669,15 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
             <span style={{ background:diffCol[q.difficulty]+"15", color:diffCol[q.difficulty], fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6 }}>{q.difficulty}</span>
           </div>
           {/* Question */}
-          <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:14, padding:"14px 16px" }}>
-            <p style={{ fontSize:15, lineHeight:1.7, margin:0, fontWeight:500, direction:"ltr", textAlign:"left" }}>{q.question}</p>
+          <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:14, padding:"14px 16px", direction:"ltr" }}>
+            <p style={{ fontSize:15, lineHeight:1.7, margin:0, fontWeight:500, textAlign:"left" }}>{q.question}</p>
           </div>
           {/* Options */}
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
             {q.options.map((opt,i) => {
               const selected = answers[q.id] === i;
               return <button key={i} onClick={()=>setAnswers(p=>({...p,[q.id]:i}))}
-                style={{ background:selected?col.accent+"18":T.surface, border:selected?`2px solid ${col.accent}`:`1px solid ${T.border}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", textAlign:"left", color:T.ink, fontSize:14, display:"flex", alignItems:"center", gap:10, transition:"all 0.15s" }}>
+                style={{ background:selected?col.accent+"18":T.surface, border:selected?`2px solid ${col.accent}`:`1px solid ${T.border}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", textAlign:"left", color:T.ink, fontSize:14, display:"flex", alignItems:"center", gap:10, transition:"all 0.15s", direction:"ltr" }}>
                 <span style={{ width:28, height:28, borderRadius:8, background:selected?col.accent:T.bg3, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0, color:selected?"#fff":"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
                 <span style={{ flex:1, lineHeight:1.4 }}>{opt}</span>
                 {selected && <span style={{ color:col.accent, fontSize:16 }}>●</span>}
