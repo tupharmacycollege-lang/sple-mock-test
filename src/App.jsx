@@ -3,6 +3,21 @@ import * as XLSX from "xlsx";
 
 const API_URL = "https://y0ww5f6rnf.execute-api.eu-north-1.amazonaws.com/prod2";
 
+// ===================== RESPONSIVE HOOK =====================
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
+  useEffect(() => {
+    const handler = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+    };
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return { isMobile, isTablet };
+}
+
 // ===================== API HELPERS =====================
 const api = {
   getQuestions: async () => {
@@ -262,7 +277,7 @@ function LoginScreen({ onLogin }) {
 
   return (
     <div style={{ ...S.page, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-      <div style={{ width:"100%", maxWidth:400 }}>
+      <div style={{ width:"100%", maxWidth:420, padding:"0 4px" }}>
         <div style={{ textAlign:"center", marginBottom:28 }}>
           <div style={{ width:56, height:56, borderRadius:14, background:"linear-gradient(135deg,#2B5FA6,#1A7A5E)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 10px" }}>💊</div>
           <div style={{ fontSize:26, fontWeight:800 }}>SPLE Platform</div>
@@ -925,7 +940,7 @@ function BankControl() {
       {/* Banks grid */}
       {loading
         ? <div style={{textAlign:"center",padding:40,color:T.ink3}}>⏳ جاري تحميل البنوك...</div>
-        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12,marginBottom:20}}>
+        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12,marginBottom:20}}>
             {banks.length===0 && <div style={{...S.card,textAlign:"center",padding:30,color:T.ink3,gridColumn:"1/-1"}}>لا توجد بنوك — أنشئ أول بنك!</div>}
             {banks.map(bank=>(
               <div key={bank.id} style={{...S.card,border:`2px solid ${activeBank?.id===bank.id?"#2B5FA6":T.border}`,background:activeBank?.id===bank.id?"rgba(43,95,166,0.05)":T.surface,transition:"all 0.2s"}}>
@@ -1194,7 +1209,7 @@ function AdminReports({ users, results }) {
       </div>
 
       {/* Summary cards */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:10, marginBottom:20 }}>
         {[
           ["🎯 Exams Taken", examResults.length, "#B83B2A"],
           ["📚 Study Sessions", studyResults.length, "#1A7A5E"],
@@ -1241,7 +1256,7 @@ function SettingsPanel({ title, icon, accentColor, settings, onSave, showTime })
   return (
     <div style={{ ...S.card, border:`1px solid ${accentColor}33`, marginBottom:24 }}>
       <div style={{ fontWeight:800, fontSize:17, marginBottom:16, color: accentColor }}>{icon} {title}</div>
-      <div style={{ display:"grid", gridTemplateColumns: showTime ? "1fr 1fr" : "1fr", gap:14, marginBottom:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns: showTime ? "repeat(auto-fit,minmax(200px,1fr))" : "1fr", gap:14, marginBottom:16 }}>
         <div style={{ background:T.bg2, borderRadius:12, padding:14 }}>
           <label style={S.label}>Number of Questions: <span style={{ color:accentColor, fontWeight:800 }}>{s.totalQ}</span></label>
           <input type="range" min={10} max={200} step={5} value={s.totalQ} onChange={e => update("totalQ", Number(e.target.value))} style={{ width:"100%", accentColor, margin:"8px 0 4px" }} />
@@ -1344,8 +1359,42 @@ function AdminDashboard({ user, onLogout }) {
     });
   }, []);
 
+  const { isMobile } = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex" }}>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex", flexDirection:"column" }}>
+      {/* Mobile top nav */}
+      {isMobile && (
+        <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"10px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ fontSize:15, fontWeight:800 }}>💊 SPLE Admin</div>
+          <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{ background:"transparent", border:`1px solid ${T.border}`, borderRadius:8, padding:"6px 12px", cursor:"pointer", fontSize:18 }}>☰</button>
+        </div>
+      )}
+      {/* Mobile sidebar overlay */}
+      {isMobile && sidebarOpen && (
+        <div style={{ position:"fixed", inset:0, zIndex:100, display:"flex" }}>
+          <div style={{ width:220, background:T.bg2, borderRight:`1px solid ${T.border}`, padding:18, display:"flex", flexDirection:"column", gap:4, boxShadow:"4px 0 20px rgba(0,0,0,0.15)" }}>
+            <div style={{ marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div><div style={{ fontSize:17, fontWeight:800 }}>💊 SPLE</div><div style={{ color:"#7C4BA0", fontSize:10, fontWeight:700 }}>ADMIN PANEL</div></div>
+              <button onClick={()=>setSidebarOpen(false)} style={{ background:"transparent", border:"none", fontSize:20, cursor:"pointer" }}>✕</button>
+            </div>
+            {TABS.map(t=>(
+              <button key={t.id} onClick={()=>{ setTab(t.id); setSidebarOpen(false); }} style={{ background:tab===t.id?"rgba(139,92,246,0.15)":"transparent", border:tab===t.id?"1px solid rgba(139,92,246,0.3)":"1px solid transparent", borderRadius:9, padding:"9px 12px", cursor:"pointer", textAlign:"left", color:tab===t.id?"#9B6DBF":"#8C7B6E", fontSize:13, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
+                {t.icon} {t.label}
+              </button>
+            ))}
+            <div style={{ marginTop:"auto" }}>
+              <div style={{ color:"#4A3F35", fontSize:11, marginBottom:6 }}>{user.name}</div>
+              <button onClick={onLogout} style={{ ...S.ghost, width:"100%", textAlign:"left", fontSize:12 }}>🚪 Logout</button>
+            </div>
+          </div>
+          <div style={{ flex:1, background:"rgba(0,0,0,0.4)" }} onClick={()=>setSidebarOpen(false)} />
+        </div>
+      )}
+      <div style={{ display:"flex", flex:1 }}>
+      {/* Desktop sidebar */}
+      {!isMobile && (
       <div style={{ width:210, background:T.bg2, borderRight:`1px solid ${T.border}`, padding:18, display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
         <div style={{ marginBottom:20 }}><div style={{ fontSize:17, fontWeight:800 }}>💊 SPLE</div><div style={{ color:"#7C4BA0", fontSize:10, fontWeight:700, letterSpacing:"0.08em" }}>ADMIN PANEL</div></div>
         {TABS.map(t=>(
@@ -1358,12 +1407,13 @@ function AdminDashboard({ user, onLogout }) {
           <button onClick={onLogout} style={{ ...S.ghost, width:"100%", textAlign:"left", fontSize:12 }}>🚪 Logout</button>
         </div>
       </div>
-      <div style={{ flex:1, padding:24, overflowY:"auto" }}>
+      )}
+      <div style={{ flex:1, padding:isMobile?16:24, overflowY:"auto" }}>
         {tab==="overview" && (
           <div>
             <h1 style={{ fontSize:22, fontWeight:800, margin:"0 0 4px" }}>Overview</h1>
             <p style={{ color:"#8C7B6E", marginBottom:20 }}>Platform summary</p>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:20 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:12, marginBottom:20 }}>
               {[["📊",`${avg}%`,"Avg Score","#C47A1E"],["🎯",bankStats.exam,"Exam Bank","#B83B2A"],["📚",bankStats.course,"Course Bank","#1A7A5E"],["❓",bankStats.course+bankStats.exam,"Total Questions","#2B5FA6"]].map(([icon,val,label,color])=>(
                 <div key={label} style={{ background:T.bg2, border:`1px solid ${color}33`, borderRadius:14, padding:18 }}>
                   <div style={{ fontSize:24 }}>{icon}</div>
@@ -1380,6 +1430,7 @@ function AdminDashboard({ user, onLogout }) {
         {tab==="students" && <AdminStudents users={users} onChange={saveU} />}
         {tab==="reports" && <AdminReports users={users} results={results} />}
         {tab==="settings" && <AdminExamSettings />}
+      </div>
       </div>
     </div>
   );
@@ -1471,27 +1522,27 @@ function StudentDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
       {/* Header */}
-      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"14px 28px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:24 }}>💊</span>
+      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:22 }}>💊</span>
           <div>
-            <div style={{ fontWeight:800, fontSize:16 }}>SPLE Platform</div>
-            <div style={{ color:"#8C7B6E", fontSize:11, letterSpacing:"0.05em" }}>Saudi Pharmacist Licensure Exam</div>
+            <div style={{ fontWeight:800, fontSize:15 }}>SPLE Platform</div>
+            <div style={{ color:"#8C7B6E", fontSize:10, letterSpacing:"0.05em" }}>Saudi Pharmacist Licensure Exam</div>
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ textAlign:"right" }}>
-            <div style={{ fontWeight:700, fontSize:13 }}>{user.name}</div>
-            <div style={{ color:"#8C7B6E", fontSize:11 }}>{user.university||user.email}</div>
+            <div style={{ fontWeight:700, fontSize:12 }}>{user.name}</div>
+            <div style={{ color:"#8C7B6E", fontSize:10 }}>{user.university||user.email}</div>
           </div>
-          <button onClick={onLogout} style={{ ...S.ghost, padding:"7px 14px", fontSize:12 }}>Sign Out</button>
+          <button onClick={onLogout} style={{ ...S.ghost, padding:"6px 12px", fontSize:12 }}>Sign Out</button>
         </div>
       </div>
 
-      <div style={{ maxWidth:760, margin:"0 auto", padding:"28px 24px" }}>
+      <div style={{ maxWidth:760, margin:"0 auto", padding:"16px 14px" }}>
 
         {/* ── Welcome Banner ── */}
-        <div style={{ background:"linear-gradient(135deg,#2B5FA6 0%,#1A4A8A 100%)", borderRadius:16, padding:"20px 24px", marginBottom:24, color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ background:"linear-gradient(135deg,#2B5FA6 0%,#1A4A8A 100%)", borderRadius:16, padding:"16px 20px", marginBottom:20, color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
           <div>
             <div style={{ fontSize:13, opacity:0.8, marginBottom:4 }}>Welcome back 👋</div>
             <div style={{ fontWeight:800, fontSize:20 }}>{user.name}</div>
@@ -1504,7 +1555,7 @@ function StudentDashboard({ user, onLogout }) {
         </div>
 
         {/* ── Practice Mode Cards ── */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:14, marginBottom:16 }}>
           {/* Exam Simulator */}
           <div style={{ ...S.card, border:"2px solid rgba(184,59,42,0.35)", background:"rgba(184,59,42,0.03)", display:"flex", flexDirection:"column", position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:-10, right:-10, fontSize:60, opacity:0.06 }}>🎯</div>
@@ -1567,7 +1618,7 @@ function StudentDashboard({ user, onLogout }) {
         {/* ── Performance Stats ── */}
         <div style={{ marginBottom:20 }}>
           <div style={{ fontWeight:800, fontSize:15, marginBottom:12 }}>📊 Performance Overview</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:12 }}>
 
             {/* Exam Stats */}
             <div style={{ ...S.card, border:"1.5px solid rgba(184,59,42,0.2)", background:"rgba(184,59,42,0.02)" }}>
@@ -2439,7 +2490,7 @@ function StudyScreen({ questions, onFinish, onHome }) {
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
-      <div style={{ background:col.bg||T.bg, borderBottom:"1px solid #10b98144", padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+      <div style={{ background:col.bg||T.bg, borderBottom:"1px solid #10b98144", padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <button onClick={onHome} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
           {cur > 0 && <button onClick={prev} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>← Back</button>}
@@ -2448,7 +2499,7 @@ function StudyScreen({ questions, onFinish, onHome }) {
         <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
       </div>
       <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:"#1A7A5E", transition:"width 0.3s" }} /></div>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
+      <div style={{ maxWidth:700, margin:"0 auto", padding:"16px 14px" }}>
         <div style={{ color:"#1A7A5E", fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
         <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.2)", marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
         <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
@@ -2530,7 +2581,7 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
       </div>
       <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} /></div>
       <div style={{ height:3, background:T.surface }}><div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} /></div>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:22 }}>
+      <div style={{ maxWidth:700, margin:"0 auto", padding:"16px 14px" }}>
         <div style={{ color:col.accent, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
         <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
         <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
