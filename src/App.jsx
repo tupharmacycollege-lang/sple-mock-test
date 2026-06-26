@@ -1576,7 +1576,7 @@ function StudentDashboard({ user, onLogout }) {
               <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>⏱ {examSettings.timeMins} min</span>
               <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>🔒 No Hints</span>
             </div>
-            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>→ Start Exam</button>
+            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>Start Exam ›</button>
           </div>
 
           {/* Study Mode */}
@@ -1599,7 +1599,7 @@ function StudentDashboard({ user, onLogout }) {
               <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>✅ Instant Answer</span>
               <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>💡 Explanation</span>
             </div>
-            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>→ Start Study</button>
+            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>Start Study ›</button>
           </div>
         </div>
 
@@ -1610,7 +1610,7 @@ function StudentDashboard({ user, onLogout }) {
             <div style={{ fontWeight:700, fontSize:13, color:"#7C4BA0" }}>Study Materials</div>
             <div style={{ color:"#8C7B6E", fontSize:11, marginTop:2 }}>23 comprehensive lessons with key points</div>
           </div>
-          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"8px 14px", fontSize:12, flexShrink:0, whiteSpace:"nowrap" }}>Browse →</button>
+          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"8px 14px", fontSize:12, flexShrink:0, whiteSpace:"nowrap" }}>Browse ›</button>
         </div>
 
         {/* ── Performance Stats ── */}
@@ -2210,7 +2210,7 @@ difficulty must be one of: سهل, متوسط, صعب`;
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:T.ink }}>
       <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"14px 24px", display:"flex", alignItems:"center", gap:12, boxShadow:T.shadow }}>
         <button onClick={onBack} style={{ ...S.btn(T.accent), padding:"9px 18px", fontSize:13, display:"flex", alignItems:"center", gap:6 }}>
-          ← Dashboard
+          ‹ Dashboard
         </button>
         <div style={{ fontWeight:800, fontSize:16, color:T.ink }}>📚 Study Materials</div>
         <div style={{ marginLeft:"auto", color:T.ink3, fontSize:12 }}>{STUDY_LESSONS.length} Lessons</div>
@@ -2319,7 +2319,7 @@ difficulty must be one of: سهل, متوسط, صعب`;
       return (
         <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:T.ink }}>
           <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"12px 24px", display:"flex", alignItems:"center", gap:12, boxShadow:T.shadow }}>
-            <button onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(lessonIdx-1); setActiveLesson(lessons[lessonIdx-1]); setSectionPhase("lesson"); }}} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>← Back</button>
+            <button onClick={()=>{ if(lessonIdx===0) setPhase("list"); else { setLessonIdx(lessonIdx-1); setActiveLesson(lessons[lessonIdx-1]); setSectionPhase("lesson"); }}} style={{ ...S.ghost, padding:"6px 14px", fontSize:13 }}>‹ Back</button>
             <div>
               <div style={{ color:color, fontWeight:800, fontSize:14, fontFamily:"system-ui,sans-serif" }}>Lesson {l.id}: {l.title}</div>
               <div style={{ color:T.ink3, fontSize:11, fontFamily:"system-ui,sans-serif" }}>{l.section}</div>
@@ -2385,7 +2385,7 @@ difficulty must be one of: سهل, متوسط, صعب`;
               <div style={{ fontWeight:700, fontSize:18, textAlign:"center" }}>No questions uploaded for this section yet</div>
               <p style={{ color:"#8C7B6E", textAlign:"center", maxWidth:400 }}>ارفع أسئلة من صفحة Questions أو ابدأ Study Session الكاملة</p>
               <div style={{ display:"flex", gap:12 }}>
-                <button onClick={()=>setPhase("list")} style={{ ...S.ghost, padding:"10px 20px" }}>← Back to Sections</button>
+                <button onClick={()=>setPhase("list")} style={{ ...S.ghost, padding:"10px 20px" }}>‹ Back to Sections</button>
                 <button onClick={onStartStudy} style={{ ...S.btn("#1A7A5E"), padding:"10px 20px" }}>📝 Start Full Study Session →</button>
               </div>
             </div>
@@ -2403,7 +2403,7 @@ difficulty must be one of: سهل, متوسط, صعب`;
             <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center", boxShadow:T.shadow }}>
               <button onClick={()=>{ setSectionPhase("lesson"); setLessonIdx(lessons.length-1); setActiveLesson(lessons[lessons.length-1]); }}
                 style={{ ...S.ghost, padding:"6px 14px", fontSize:13, display:"flex", alignItems:"center", gap:6 }}>
-                ← Study Materials
+                ‹ Study Materials
               </button>
               <span style={{ background:color+"18", color:color, fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20, border:`1px solid ${color}33` }}>
                 📝 {activeSection.split(" ")[0]} Practice
@@ -2514,7 +2514,7 @@ function StudyScreen({ questions, onFinish, onHome }) {
           </div>
           {/* Question */}
           <div style={{ ...S.card, border:`1px solid ${col.accent}22`, marginBottom:14, padding:"14px 16px" }}>
-            <p style={{ fontSize:15, lineHeight:1.65, margin:0, fontWeight:500, textAlign:"left" }}>{q.question}</p>
+            <p style={{ fontSize:15, lineHeight:1.7, margin:0, fontWeight:500, direction:"ltr", textAlign:"left" }}>{q.question}</p>
           </div>
           {/* Options */}
           <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
@@ -2539,7 +2539,7 @@ function StudyScreen({ questions, onFinish, onHome }) {
           {showExp && (
             <div style={{ background:correct?"rgba(26,122,94,0.08)":"rgba(184,59,42,0.06)", border:`1.5px solid ${correct?"rgba(26,122,94,0.3)":"rgba(184,59,42,0.3)"}`, borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
               <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-              <p style={{ color:T.ink2, fontSize:13, lineHeight:1.65, margin:0 }}>💡 {(q.explanation || "No explanation provided.").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/`/g,"")}</p>
+              <p style={{ color:T.ink2, fontSize:13, lineHeight:1.65, margin:0, textAlign:"left" }}>💡 {(q.explanation || "No explanation provided.").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/`/g,"")}</p>
             </div>
           )}
         </div>
@@ -2547,10 +2547,10 @@ function StudyScreen({ questions, onFinish, onHome }) {
       {/* Fixed bottom nav */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10 }}>
         <button onClick={prev} disabled={cur===0}
-          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>← Back</button>
+          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>‹ Back</button>
         {answered
           ? <button onClick={next} style={{ ...S.btn("#1A7A5E"), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
-              {cur < questions.length-1 ? "Next →" : "🏁 Finish"}
+              {cur < questions.length-1 ? "Next ›" : "Finish ✓"}
             </button>
           : <button disabled style={{ ...S.btn(T.bg3), flex:1, padding:"12px", opacity:0.4, color:T.ink3 }}>Choose an answer</button>
         }
@@ -2562,23 +2562,36 @@ function StudyScreen({ questions, onFinish, onHome }) {
 function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [secsLeft, setSecsLeft] = useState((timeMins || 120) * 60);
+  const totalSecs = (timeMins || 120) * 60;
+  const [secsLeft, setSecsLeft] = useState(totalSecs);
+  const startTimeRef = React.useRef(Date.now());
+  const savedSecsRef = React.useRef(totalSecs);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setSecsLeft(s => {
-        if (s <= 1) { clearInterval(t); onFinish(answers); return 0; }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
+    // Use real clock so minimizing screen doesn't pause timer
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const remaining = Math.max(0, savedSecsRef.current - elapsed);
+      setSecsLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        onFinish(answers);
+      }
+    };
+    const interval = setInterval(tick, 500);
+    // Handle visibility change - recalc when tab becomes active
+    const onVisible = () => { tick(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
-  const h = Math.floor(secsLeft / 3600);
-  const m = Math.floor((secsLeft % 3600) / 60);
+  const m = Math.floor(secsLeft / 60);
   const s = secsLeft % 60;
-  const timeStr = h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
-  const timePct = secsLeft / ((timeMins || 120) * 60);
+  const timeStr = `${m}:${String(s).padStart(2,"0")}`;
+  const timePct = secsLeft / totalSecs;
   const timerColor = timePct > 0.25 ? "#1A7A5E" : timePct > 0.1 ? "#C47A1E" : "#B83B2A";
 
   const q = questions && questions.length > 0 ? questions[cur] : null;
@@ -2602,9 +2615,12 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
       {/* Header */}
       <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
         <button onClick={()=>{ if(window.confirm("Exit exam?")) onHome(); }} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"7px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:13 }}>🏠 Home</button>
-        <div style={{ display:"flex", alignItems:"center", gap:6, background:timerColor+"18", border:`1px solid ${timerColor}44`, borderRadius:10, padding:"6px 14px" }}>
-          <span style={{ fontSize:13 }}>⏱</span>
-          <span style={{ color:timerColor, fontWeight:800, fontSize:16, fontFamily:"monospace" }}>{timeStr}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:6, background:timerColor+"18", border:`1px solid ${timerColor}44`, borderRadius:10, padding:"6px 12px" }}>
+          <span style={{ fontSize:12 }}>⏱</span>
+          <div>
+            <div style={{ color:timerColor, fontWeight:800, fontSize:16, fontFamily:"monospace", lineHeight:1 }}>{timeStr}</div>
+            <div style={{ color:timerColor, fontSize:9, opacity:0.7, textAlign:"center" }}>min:sec</div>
+          </div>
         </div>
         <span style={{ background:col.accent+"15", color:col.accent, fontWeight:700, fontSize:12, padding:"5px 10px", borderRadius:8 }}>{cur+1}/{questions.length}</span>
       </div>
@@ -2621,7 +2637,7 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
           </div>
           {/* Question */}
           <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:14, padding:"14px 16px" }}>
-            <p style={{ fontSize:15, lineHeight:1.65, margin:0, fontWeight:500, textAlign:"left" }}>{q.question}</p>
+            <p style={{ fontSize:15, lineHeight:1.7, margin:0, fontWeight:500, direction:"ltr", textAlign:"left" }}>{q.question}</p>
           </div>
           {/* Options */}
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -2640,9 +2656,9 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
       {/* Fixed bottom nav */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10 }}>
         <button onClick={()=>{ if(cur>0) setCur(p=>p-1); }} disabled={cur===0}
-          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>← Back</button>
+          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>‹ Back</button>
         <button onClick={next} style={{ ...S.btn(col.accent), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
-          {cur < questions.length-1 ? (answered ? "Next →" : "Skip →") : "🏁 Finish Exam"}
+          {cur < questions.length-1 ? (answered ? "Next ›" : "Skip ›") : "Finish Exam ✓"}
         </button>
       </div>
     </div>
