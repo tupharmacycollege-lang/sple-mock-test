@@ -1522,103 +1522,101 @@ function StudentDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
       {/* Header */}
-      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ fontSize:22 }}>💊</span>
+      <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#2B5FA6,#1A7A5E)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>💊</div>
           <div>
-            <div style={{ fontWeight:800, fontSize:15 }}>SPLE Platform</div>
-            <div style={{ color:"#8C7B6E", fontSize:10, letterSpacing:"0.05em" }}>Saudi Pharmacist Licensure Exam</div>
+            <div style={{ fontWeight:800, fontSize:14 }}>SPLE Platform</div>
+            <div style={{ color:"#8C7B6E", fontSize:10 }}>Pharmacist Licensure Exam</div>
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <div style={{ textAlign:"right" }}>
             <div style={{ fontWeight:700, fontSize:12 }}>{user.name}</div>
             <div style={{ color:"#8C7B6E", fontSize:10 }}>{user.university||user.email}</div>
           </div>
-          <button onClick={onLogout} style={{ ...S.ghost, padding:"6px 12px", fontSize:12 }}>Sign Out</button>
+          <button onClick={onLogout} style={{ background:"rgba(184,59,42,0.08)", border:"1px solid rgba(184,59,42,0.2)", borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:11, fontWeight:700, color:"#B83B2A" }}>Sign Out</button>
         </div>
       </div>
 
       <div style={{ maxWidth:760, margin:"0 auto", padding:"16px 14px" }}>
 
         {/* ── Welcome Banner ── */}
-        <div style={{ background:"linear-gradient(135deg,#2B5FA6 0%,#1A4A8A 100%)", borderRadius:16, padding:"16px 20px", marginBottom:20, color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+        <div style={{ background:"linear-gradient(135deg,#2B5FA6 0%,#1A4A8A 100%)", borderRadius:16, padding:"16px 18px", marginBottom:18, color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div>
-            <div style={{ fontSize:13, opacity:0.8, marginBottom:4 }}>Welcome back 👋</div>
+            <div style={{ fontSize:12, opacity:0.8, marginBottom:3 }}>Welcome back 👋</div>
             <div style={{ fontWeight:800, fontSize:20 }}>{user.name}</div>
-            <div style={{ fontSize:12, opacity:0.7, marginTop:2 }}>{user.university || "SPLE Candidate"}</div>
+            <div style={{ fontSize:11, opacity:0.7, marginTop:2 }}>{user.university || "SPLE Candidate"}</div>
           </div>
-          <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:32, fontWeight:900, color:"#FFD700" }}>{examBest > 0 ? examBest+"%" : "—"}</div>
-            <div style={{ fontSize:11, opacity:0.8 }}>Personal Best</div>
+          <div style={{ textAlign:"center", background:"rgba(255,255,255,0.12)", borderRadius:12, padding:"10px 16px" }}>
+            <div style={{ fontSize:28, fontWeight:900, color:"#FFD700" }}>{examBest > 0 ? examBest+"%" : "—"}</div>
+            <div style={{ fontSize:10, opacity:0.8 }}>Personal Best</div>
           </div>
         </div>
 
         {/* ── Practice Mode Cards ── */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:14, marginBottom:16 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:16 }}>
           {/* Exam Simulator */}
-          <div style={{ ...S.card, border:"2px solid rgba(184,59,42,0.35)", background:"rgba(184,59,42,0.03)", display:"flex", flexDirection:"column", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:-10, right:-10, fontSize:60, opacity:0.06 }}>🎯</div>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-              <span style={{ fontSize:24 }}>🎯</span>
-              <div>
-                <div style={{ fontWeight:800, fontSize:15, color:"#B83B2A" }}>SCHS Exam Simulator</div>
-                <div style={{ fontSize:11, color:"#8C7B6E" }}>Timed · No feedback · Real conditions</div>
+          <div style={{ ...S.card, border:"2px solid rgba(184,59,42,0.35)", background:"rgba(184,59,42,0.03)", padding:"14px 16px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:22 }}>🎯</span>
+                <div>
+                  <div style={{ fontWeight:800, fontSize:15, color:"#B83B2A" }}>SCHS Exam Simulator</div>
+                  <div style={{ fontSize:11, color:"#8C7B6E" }}>Timed · No feedback · Real conditions</div>
+                </div>
+              </div>
+              <div style={{ textAlign:"center", background:"rgba(184,59,42,0.1)", borderRadius:10, padding:"6px 10px", minWidth:44 }}>
+                <div style={{ fontWeight:800, fontSize:16, color:"#B83B2A" }}>{examResults.length}</div>
+                <div style={{ fontSize:9, color:"#8C7B6E" }}>taken</div>
               </div>
             </div>
-            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+            <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
               <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>📝 {examSettings.totalQ} Questions</span>
               <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>⏱ {examSettings.timeMins} min</span>
               <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>🔒 No Hints</span>
             </div>
-            <div style={{ display:"flex", gap:8, marginTop:"auto", alignItems:"center" }}>
-              <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), flex:1, padding:"11px", fontSize:13, fontWeight:700 }}>Start Exam →</button>
-              <div style={{ textAlign:"center", minWidth:44 }}>
-                <div style={{ fontWeight:800, fontSize:15, color:"#B83B2A" }}>{examResults.length}</div>
-                <div style={{ fontSize:10, color:"#8C7B6E" }}>taken</div>
-              </div>
-            </div>
+            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>→ Start Exam</button>
           </div>
 
           {/* Study Mode */}
-          <div style={{ ...S.card, border:"2px solid rgba(26,122,94,0.35)", background:"rgba(26,122,94,0.03)", display:"flex", flexDirection:"column", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", top:-10, right:-10, fontSize:60, opacity:0.06 }}>📚</div>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-              <span style={{ fontSize:24 }}>📚</span>
-              <div>
-                <div style={{ fontWeight:800, fontSize:15, color:"#1A7A5E" }}>Study Session</div>
-                <div style={{ fontSize:11, color:"#8C7B6E" }}>Instant feedback · Explanations</div>
+          <div style={{ ...S.card, border:"2px solid rgba(26,122,94,0.35)", background:"rgba(26,122,94,0.03)", padding:"14px 16px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:22 }}>📚</span>
+                <div>
+                  <div style={{ fontWeight:800, fontSize:15, color:"#1A7A5E" }}>Study Session</div>
+                  <div style={{ fontSize:11, color:"#8C7B6E" }}>Instant feedback · Explanations</div>
+                </div>
+              </div>
+              <div style={{ textAlign:"center", background:"rgba(26,122,94,0.1)", borderRadius:10, padding:"6px 10px", minWidth:44 }}>
+                <div style={{ fontWeight:800, fontSize:16, color:"#1A7A5E" }}>{studyResults.length}</div>
+                <div style={{ fontSize:9, color:"#8C7B6E" }}>sessions</div>
               </div>
             </div>
-            <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+            <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
               <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>📝 {studySettings.totalQ} Questions</span>
               <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>✅ Instant Answer</span>
               <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>💡 Explanation</span>
             </div>
-            <div style={{ display:"flex", gap:8, marginTop:"auto", alignItems:"center" }}>
-              <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), flex:1, padding:"11px", fontSize:13, fontWeight:700 }}>Start Study →</button>
-              <div style={{ textAlign:"center", minWidth:44 }}>
-                <div style={{ fontWeight:800, fontSize:15, color:"#1A7A5E" }}>{studyResults.length}</div>
-                <div style={{ fontSize:10, color:"#8C7B6E" }}>sessions</div>
-              </div>
-            </div>
+            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>→ Start Study</button>
           </div>
         </div>
 
         {/* Study Materials */}
-        <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.25)", background:"rgba(139,92,246,0.02)", display:"flex", alignItems:"center", gap:16, marginBottom:24, padding:"14px 18px" }}>
-          <span style={{ fontSize:28, flexShrink:0 }}>📖</span>
-          <div style={{ flex:1 }}>
+        <div style={{ ...S.card, border:"1px solid rgba(139,92,246,0.25)", background:"rgba(139,92,246,0.02)", display:"flex", alignItems:"center", gap:12, marginBottom:18, padding:"12px 14px" }}>
+          <span style={{ fontSize:26, flexShrink:0 }}>📖</span>
+          <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontWeight:700, fontSize:13, color:"#7C4BA0" }}>Study Materials</div>
-            <div style={{ color:"#8C7B6E", fontSize:12, marginTop:2 }}>23 comprehensive lessons with key points and reference tables</div>
+            <div style={{ color:"#8C7B6E", fontSize:11, marginTop:2 }}>23 comprehensive lessons with key points</div>
           </div>
-          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"8px 16px", fontSize:12, flexShrink:0 }}>Browse →</button>
+          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"8px 14px", fontSize:12, flexShrink:0, whiteSpace:"nowrap" }}>Browse →</button>
         </div>
 
         {/* ── Performance Stats ── */}
-        <div style={{ marginBottom:20 }}>
-          <div style={{ fontWeight:800, fontSize:15, marginBottom:12 }}>📊 Performance Overview</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:12 }}>
+        <div style={{ marginBottom:18 }}>
+          <div style={{ fontWeight:800, fontSize:15, marginBottom:10 }}>📊 Performance Overview</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
 
             {/* Exam Stats */}
             <div style={{ ...S.card, border:"1.5px solid rgba(184,59,42,0.2)", background:"rgba(184,59,42,0.02)" }}>
@@ -1626,11 +1624,11 @@ function StudentDashboard({ user, onLogout }) {
                 <span>🎯</span>
                 <span style={{ fontWeight:700, fontSize:12, color:"#B83B2A" }}>SCHS Exam</span>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-                {[[examResults.length,"Attempts","#B83B2A"],[`${examAvg}%`,"Avg Score","#2B5FA6"],[`${examBest}%`,"Best","#C47A1E"]].map(([val,label,color])=>(
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:4 }}>
+                {[[examResults.length,"Attempts","#B83B2A"],[`${examAvg}%`,"Avg","#2B5FA6"],[`${examBest}%`,"Best","#C47A1E"]].map(([val,label,color])=>(
                   <div key={label} style={{ textAlign:"center" }}>
-                    <div style={{ fontWeight:800, fontSize:18, color }}>{val}</div>
-                    <div style={{ color:"#8C7B6E", fontSize:10, marginTop:2 }}>{label}</div>
+                    <div style={{ fontWeight:800, fontSize:15, color }}>{val}</div>
+                    <div style={{ color:"#8C7B6E", fontSize:9, marginTop:1 }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -1642,11 +1640,11 @@ function StudentDashboard({ user, onLogout }) {
                 <span>📚</span>
                 <span style={{ fontWeight:700, fontSize:12, color:"#1A7A5E" }}>Study Sessions</span>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-                {[[studyResults.length,"Sessions","#1A7A5E"],[`${studyAvg}%`,"Avg Score","#2B5FA6"],[`${studyBest}%`,"Best","#C47A1E"]].map(([val,label,color])=>(
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:4 }}>
+                {[[studyResults.length,"Sessions","#1A7A5E"],[`${studyAvg}%`,"Avg","#2B5FA6"],[`${studyBest}%`,"Best","#C47A1E"]].map(([val,label,color])=>(
                   <div key={label} style={{ textAlign:"center" }}>
-                    <div style={{ fontWeight:800, fontSize:18, color }}>{val}</div>
-                    <div style={{ color:"#8C7B6E", fontSize:10, marginTop:2 }}>{label}</div>
+                    <div style={{ fontWeight:800, fontSize:15, color }}>{val}</div>
+                    <div style={{ color:"#8C7B6E", fontSize:9, marginTop:1 }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -2470,6 +2468,7 @@ function StudyScreen({ questions, onFinish, onHome }) {
   const [cur, setCur] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showExp, setShowExp] = useState(false);
+
   const q = questions && questions.length > 0 ? questions[cur] : null;
   if (!questions || questions.length === 0 || !q) {
     return (
@@ -2489,39 +2488,72 @@ function StudyScreen({ questions, onFinish, onHome }) {
   const prev = () => { setShowExp(false); if (cur > 0) setCur(p=>p-1); };
 
   return (
-    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
-      <div style={{ background:col.bg||T.bg, borderBottom:"1px solid #10b98144", padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <button onClick={onHome} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
-          {cur > 0 && <button onClick={prev} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>← Back</button>}
-        </div>
-        <span style={{ background:"rgba(16,185,129,0.15)", color:"#1A7A5E", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:20 }}>📚 Study · Q {cur+1}/{questions.length}</span>
-        <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex", flexDirection:"column" }}>
+      {/* Header */}
+      <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+        <button onClick={onHome} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"7px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:13 }}>🏠 Home</button>
+        <span style={{ background:"rgba(26,122,94,0.12)", color:"#1A7A5E", fontSize:12, fontWeight:700, padding:"5px 12px", borderRadius:10 }}>📚 Study</span>
+        <span style={{ background:diffCol[q.difficulty]+"15", color:diffCol[q.difficulty], fontWeight:700, fontSize:12, padding:"5px 10px", borderRadius:8 }}>{q.difficulty}</span>
       </div>
-      <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:"#1A7A5E", transition:"width 0.3s" }} /></div>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:"16px 14px" }}>
-        <div style={{ color:"#1A7A5E", fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
-        <div style={{ ...S.card, border:"1px solid rgba(16,185,129,0.2)", marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
-        <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
-          {q.options.map((opt,i) => {
-            let bg="rgba(140,110,80,0.05)", border=`1px solid ${T.border}`, c=T.ink;
-            if (answered) {
-              if (i === q.answer) { bg="rgba(26,122,94,0.12)"; border="1.5px solid #1A7A5E"; c="#1A7A5E"; }
-              else if (i === answers[q.id]) { bg="rgba(184,59,42,0.10)"; border="1.5px solid #B83B2A"; c="#B83B2A"; }
-            }
-            return <button key={i} onClick={()=>{ if(!answered){ setAnswers(p=>({...p,[q.id]:i})); setShowExp(true); }}} style={{ background:bg,border,borderRadius:11,padding:"12px 16px",cursor:answered?"default":"pointer",textAlign:"left",color:c||T.ink,fontSize:13,display:"flex",alignItems:"center",gap:10 }}>
-              <span style={{ width:26,height:26,borderRadius:7,background:T.bg3,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
-              {opt}
-              {answered && i===q.answer && <span style={{ marginLeft:"auto" }}>✓</span>}
-              {answered && i===answers[q.id] && i!==q.answer && <span style={{ marginLeft:"auto" }}>✗</span>}
-            </button>;
-          })}
+      {/* Progress */}
+      <div style={{ height:4, background:T.bg3, flexShrink:0 }}>
+        <div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:"#1A7A5E", transition:"width 0.3s" }} />
+      </div>
+      <div style={{ textAlign:"center", padding:"6px", background:T.bg2, fontSize:11, color:T.ink3, flexShrink:0 }}>
+        Question {cur+1} of {questions.length}
+      </div>
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto", padding:"14px 14px 90px" }}>
+        <div style={{ maxWidth:700, margin:"0 auto" }}>
+          {/* Badges */}
+          <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+            <span style={{ background:col.accent+"15", color:col.accent, fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6 }}>
+              {q.section==="Social/Behavioral/Administrative Sciences"?"Social/Admin":q.section?.split(" ")[0]}
+            </span>
+            <span style={{ background:"rgba(140,110,80,0.1)", color:T.ink3, fontSize:10, padding:"3px 8px", borderRadius:6 }}>{q.category}</span>
+          </div>
+          {/* Question */}
+          <div style={{ ...S.card, border:`1px solid ${col.accent}22`, marginBottom:14, padding:"14px 16px" }}>
+            <p style={{ fontSize:15, lineHeight:1.65, margin:0, fontWeight:500, textAlign:"left" }}>{q.question}</p>
+          </div>
+          {/* Options */}
+          <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+            {q.options.map((opt,i) => {
+              let bg=T.surface, border=`1px solid ${T.border}`, c=T.ink, iconBg=T.bg3, iconC="#8C7B6E";
+              if (answered) {
+                if (i === q.answer) { bg="rgba(26,122,94,0.10)"; border="2px solid #1A7A5E"; c="#1A7A5E"; iconBg="#1A7A5E"; iconC="#fff"; }
+                else if (i === answers[q.id]) { bg="rgba(184,59,42,0.08)"; border="2px solid #B83B2A"; c="#B83B2A"; iconBg="#B83B2A"; iconC="#fff"; }
+              }
+              return (
+                <button key={i} onClick={()=>{ if(!answered){ setAnswers(p=>({...p,[q.id]:i})); setShowExp(true); }}}
+                  style={{ background:bg, border, borderRadius:10, padding:"12px 14px", cursor:answered?"default":"pointer", textAlign:"left", color:c, fontSize:14, display:"flex", alignItems:"center", gap:10, transition:"all 0.15s" }}>
+                  <span style={{ width:28, height:28, borderRadius:8, background:iconBg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0, color:iconC }}>
+                    {answered && i===q.answer ? "✓" : answered && i===answers[q.id] ? "✗" : ["A","B","C","D"][i]}
+                  </span>
+                  <span style={{ flex:1, lineHeight:1.4 }}>{opt}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Explanation */}
+          {showExp && (
+            <div style={{ background:correct?"rgba(26,122,94,0.08)":"rgba(184,59,42,0.06)", border:`1.5px solid ${correct?"rgba(26,122,94,0.3)":"rgba(184,59,42,0.3)"}`, borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
+              <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
+              <p style={{ color:T.ink2, fontSize:13, lineHeight:1.65, margin:0 }}>💡 {(q.explanation || "No explanation provided.").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/`/g,"")}</p>
+            </div>
+          )}
         </div>
-        {showExp && <div style={{ background:correct?"rgba(26,122,94,0.10)":"rgba(184,59,42,0.08)", border:`1px solid ${correct?"rgba(26,122,94,0.35)":"rgba(184,59,42,0.30)"}`, borderRadius:12, padding:16, marginBottom:16 }}>
-          <div style={{ fontWeight:700, marginBottom:6, color:correct?"#1A7A5E":"#B83B2A", fontSize:13 }}>{correct?"✅ Correct!":"❌ Incorrect"}</div>
-          <p style={{ color:T.ink2, fontSize:13, lineHeight:1.7, margin:0 }}>💡 {(q.explanation || "No explanation provided.").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/`/g,"")}</p>
-        </div>}
-        {answered && <button onClick={next} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:13 }}>{cur<questions.length-1?"Next →":"🏁 Finish Study Session"}</button>}
+      </div>
+      {/* Fixed bottom nav */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10 }}>
+        <button onClick={prev} disabled={cur===0}
+          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>← Back</button>
+        {answered
+          ? <button onClick={next} style={{ ...S.btn("#1A7A5E"), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
+              {cur < questions.length-1 ? "Next →" : "🏁 Finish"}
+            </button>
+          : <button disabled style={{ ...S.btn(T.bg3), flex:1, padding:"12px", opacity:0.4, color:T.ink3 }}>Choose an answer</button>
+        }
       </div>
     </div>
   );
@@ -2549,7 +2581,6 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const timePct = secsLeft / ((timeMins || 120) * 60);
   const timerColor = timePct > 0.25 ? "#1A7A5E" : timePct > 0.1 ? "#C47A1E" : "#B83B2A";
 
-  // Safety: render empty state if no questions
   const q = questions && questions.length > 0 ? questions[cur] : null;
   if (!questions || questions.length === 0 || !q) {
     return (
@@ -2567,34 +2598,50 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const next = () => { if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
 
   return (
-    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
-      <div style={{ background:col.bg, borderBottom:`1px solid ${col.accent}44`, padding:"11px 22px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <button onClick={()=>{ if(window.confirm("هل تريد الخروج؟ سيتم إلغاء الاختبار الحالي.")) onHome(); }} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"5px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:12 }}>🏠 Home</button>
-          <span style={{ color:"#8C7B6E", fontSize:13 }}>🎯 محاكي الاختبار · {cur+1}/{questions.length}</span>
+    <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex", flexDirection:"column" }}>
+      {/* Header */}
+      <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+        <button onClick={()=>{ if(window.confirm("Exit exam?")) onHome(); }} style={{ background:"rgba(140,110,80,0.12)", border:"none", borderRadius:8, padding:"7px 12px", color:"#8C7B6E", cursor:"pointer", fontSize:13 }}>🏠 Home</button>
+        <div style={{ display:"flex", alignItems:"center", gap:6, background:timerColor+"18", border:`1px solid ${timerColor}44`, borderRadius:10, padding:"6px 14px" }}>
+          <span style={{ fontSize:13 }}>⏱</span>
+          <span style={{ color:timerColor, fontWeight:800, fontSize:16, fontFamily:"monospace" }}>{timeStr}</span>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(0,0,0,0.3)", borderRadius:8, padding:"5px 12px" }}>
-          <span style={{ fontSize:14 }}>⏱️</span>
-          <span style={{ color:timerColor, fontWeight:800, fontSize:15, fontFamily:"monospace" }}>{timeStr}</span>
-        </div>
-        <span style={{ color:diffCol[q.difficulty], fontWeight:700, fontSize:13 }}>{q.difficulty}</span>
+        <span style={{ background:col.accent+"15", color:col.accent, fontWeight:700, fontSize:12, padding:"5px 10px", borderRadius:8 }}>{cur+1}/{questions.length}</span>
       </div>
-      <div style={{ height:4, background:T.bg3 }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} /></div>
-      <div style={{ height:3, background:T.surface }}><div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} /></div>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:"16px 14px" }}>
-        <div style={{ color:col.accent, fontSize:10, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:1 }}>{q.section} · {q.category}</div>
-        <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:18 }}><p style={{ fontSize:16, lineHeight:1.7, margin:0, fontWeight:500 }}>{q.question}</p></div>
-        <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:18 }}>
-          {q.options.map((opt,i) => {
-            const selected = answers[q.id] === i;
-            return <button key={i} onClick={()=>setAnswers(p=>({...p,[q.id]:i}))} style={{ background:selected?"rgba(59,130,246,0.15)":"rgba(140,110,80,0.05)", border:selected?`1.5px solid ${col.accent}`:`1px solid ${T.border}`, borderRadius:11, padding:"12px 16px", cursor:"pointer", textAlign:"left", color:selected?"#2B5FA6":T.ink, fontSize:13, display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ width:26,height:26,borderRadius:7,background:selected?col.accent+"33":"rgba(140,110,80,0.10)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,color:selected?col.accent:"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
-              {opt}
-              {selected && <span style={{ marginLeft:"auto", color:col.accent }}>●</span>}
-            </button>;
-          })}
+      {/* Progress bars */}
+      <div style={{ height:3, background:T.bg3, flexShrink:0 }}><div style={{ width:`${((cur+1)/questions.length)*100}%`, height:"100%", background:col.accent, transition:"width 0.3s" }} /></div>
+      <div style={{ height:3, background:T.bg3, flexShrink:0 }}><div style={{ width:`${timePct*100}%`, height:"100%", background:timerColor, transition:"width 1s linear" }} /></div>
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto", padding:"14px 14px 80px" }}>
+        <div style={{ maxWidth:700, margin:"0 auto" }}>
+          {/* Section + difficulty badge */}
+          <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+            <span style={{ background:col.accent+"15", color:col.accent, fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6 }}>{q.section==="Social/Behavioral/Administrative Sciences"?"Social/Admin":q.section?.split(" ")[0]}</span>
+            <span style={{ background:diffCol[q.difficulty]+"15", color:diffCol[q.difficulty], fontSize:10, fontWeight:700, padding:"3px 8px", borderRadius:6 }}>{q.difficulty}</span>
+          </div>
+          {/* Question */}
+          <div style={{ ...S.card, border:`1px solid ${col.accent}33`, marginBottom:14, padding:"14px 16px" }}>
+            <p style={{ fontSize:15, lineHeight:1.65, margin:0, fontWeight:500, textAlign:"left" }}>{q.question}</p>
+          </div>
+          {/* Options */}
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {q.options.map((opt,i) => {
+              const selected = answers[q.id] === i;
+              return <button key={i} onClick={()=>setAnswers(p=>({...p,[q.id]:i}))}
+                style={{ background:selected?col.accent+"18":T.surface, border:selected?`2px solid ${col.accent}`:`1px solid ${T.border}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", textAlign:"left", color:T.ink, fontSize:14, display:"flex", alignItems:"center", gap:10, transition:"all 0.15s" }}>
+                <span style={{ width:28, height:28, borderRadius:8, background:selected?col.accent:T.bg3, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0, color:selected?"#fff":"#8C7B6E" }}>{["A","B","C","D"][i]}</span>
+                <span style={{ flex:1, lineHeight:1.4 }}>{opt}</span>
+                {selected && <span style={{ color:col.accent, fontSize:16 }}>●</span>}
+              </button>;
+            })}
+          </div>
         </div>
-        <button onClick={next} style={{ ...S.btn(col.accent), width:"100%", padding:13 }}>
+      </div>
+      {/* Fixed bottom nav */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10 }}>
+        <button onClick={()=>{ if(cur>0) setCur(p=>p-1); }} disabled={cur===0}
+          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>← Back</button>
+        <button onClick={next} style={{ ...S.btn(col.accent), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
           {cur < questions.length-1 ? (answered ? "Next →" : "Skip →") : "🏁 Finish Exam"}
         </button>
       </div>
