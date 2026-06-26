@@ -146,6 +146,10 @@ const DB = {
   saveStudySettings: (s) => localStorage.setItem("sple_study_settings", JSON.stringify(s)),
   getExamSettings: () => JSON.parse(localStorage.getItem("sple_exam_settings") || "null") || { totalQ: 100, timeMins: 120, diffPct: { "سهل": 30, "متوسط": 40, "صعب": 30 } },
   saveExamSettings: (s) => localStorage.setItem("sple_exam_settings", JSON.stringify(s)),
+  // Session persistence
+  saveSession: (userId, data) => localStorage.setItem(`sple_session_${userId}`, JSON.stringify({...data, savedAt: Date.now()})),
+  getSession: (userId) => { const s = localStorage.getItem(`sple_session_${userId}`); return s ? JSON.parse(s) : null; },
+  clearSession: (userId) => localStorage.removeItem(`sple_session_${userId}`),
 };
 
 const ADMIN = { email: "admin123", password: "123456" };
@@ -1442,11 +1446,14 @@ function StudentDashboard({ user, onLogout }) {
   const [screen, setScreen] = useState("home");
   const [examQ, setExamQ] = useState([]);
   const [examA, setExamA] = useState({});
+  const [examCur, setExamCur] = useState(0);
   const [mode, setMode] = useState("exam");
   const [myResults, setMyResults] = useState(DB.getResults().filter(r=>r.userId===user.id));
   const [questions, setQuestions] = useState(DB.getQuestions());
   const [loadingQ, setLoadingQ] = useState(true);
   const [histTab, setHistTab] = useState("exam");
+  const [savedSession, setSavedSession] = useState(null);
+  const [showResumeModal, setShowResumeModal] = useState(false);
 
   const studySettings = DB.getStudySettings();
   const examSettings = DB.getExamSettings();
@@ -1457,11 +1464,43 @@ function StudentDashboard({ user, onLogout }) {
       const mine = all.filter(r => r.userId === user.id);
       if (mine.length > 0) setMyResults(mine);
     });
+    // Check for saved session
+    const sess = DB.getSession(user.id);
+    if (sess) {
+      setSavedSession(sess);
+      setShowResumeModal(true);
+    }
   }, []);
 
   useEffect(() => {
     api.getQuestions().then(qs => { setQuestions(qs); setLoadingQ(false); });
   }, []);
+
+  // Auto-save session every 30 seconds when in exam/study
+  useEffect(() => {
+    if (screen !== "exam" && screen !== "study" && screen !== "materials") return;
+    const interval = setInterval(() => {
+      DB.saveSession(user.id, { screen, mode, examQ, examA, examCur });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [screen, examQ, examA, examCur, mode]);
+
+  const resumeSession = () => {
+    if (!savedSession) return;
+    setScreen(savedSession.screen);
+    setMode(savedSession.mode || "exam");
+    setExamQ(savedSession.examQ || []);
+    setExamA(savedSession.examA || {});
+    setExamCur(savedSession.examCur || 0);
+    setShowResumeModal(false);
+    setSavedSession(null);
+  };
+
+  const discardSession = () => {
+    DB.clearSession(user.id);
+    setSavedSession(null);
+    setShowResumeModal(false);
+  };
 
   const [starting, setStarting] = useState(false);
   const [startingMode, setStartingMode] = useState("");
@@ -1470,6 +1509,7 @@ function StudentDashboard({ user, onLogout }) {
     const settings = sessionMode === "study" ? studySettings : examSettings;
     const field = sessionMode === "study" ? "activeForStudy" : "activeForExam";
     const label = sessionMode === "study" ? "Study Session" : "SCHS Exam";
+    DB.clearSession(user.id);
     setStarting(true);
     setStartingMode(sessionMode);
     let pool = [];
@@ -1490,10 +1530,14 @@ function StudentDashboard({ user, onLogout }) {
     }
     const q = buildExam(pool, settings);
     setStarting(false);
+    setExamCur(0); setExamA({});
     setMode(sessionMode); setExamQ(q); setScreen(sessionMode);
+    // Save session immediately
+    DB.saveSession(user.id, { screen: sessionMode, mode: sessionMode, examQ: q, examA: {}, examCur: 0 });
   };
 
   const finishSession = async (answers) => {
+    DB.clearSession(user.id); // Clear saved session on finish
     const correct = examQ.filter(q => answers[q.id] === q.answer).length;
     const score = Math.round((correct / examQ.length) * 100);
     const result = {
@@ -1504,9 +1548,7 @@ function StudentDashboard({ user, onLogout }) {
       score, correct, total: examQ.length, mode,
       id: `${user.id}_${Date.now()}`
     };
-    // Save to DynamoDB
     await api.saveResult(result);
-    // Also save locally for quick access
     const all = [...DB.getResults(), result];
     DB.saveResults(all);
     setMyResults(all.filter(r => r.userId === user.id));
@@ -1540,9 +1582,9 @@ function StudentDashboard({ user, onLogout }) {
       `}</style>
     </div>
   );
-  if (screen === "materials") return <StudyMaterialsScreen onBack={()=>setScreen("home")} onStartStudy={()=>startSession("study")} allQuestions={questions} />;
-  if (screen === "study") return <StudyScreen questions={examQ} onFinish={finishSession} onHome={()=>setScreen("home")} />;
-  if (screen === "exam") return <ExamScreen questions={examQ} onFinish={finishSession} timeMins={examSettings.timeMins} onHome={()=>setScreen("home")} />;
+  if (screen === "materials") return <StudyMaterialsScreen onBack={()=>{ DB.saveSession(user.id,{screen:"materials",mode,examQ:[],examA:{},examCur:0}); setScreen("home"); }} onStartStudy={()=>startSession("study")} allQuestions={questions} />;
+  if (screen === "study") return <StudyScreen questions={examQ} initialCur={examCur} initialAnswers={examA} onFinish={finishSession} onHome={()=>{ DB.saveSession(user.id,{screen:"study",mode,examQ,examA,examCur}); setScreen("home"); }} onProgress={(cur,ans)=>{ setExamCur(cur); setExamA(ans); DB.saveSession(user.id,{screen:"study",mode,examQ,examA:ans,examCur:cur}); }} />;
+  if (screen === "exam") return <ExamScreen questions={examQ} initialCur={examCur} initialAnswers={examA} onFinish={finishSession} timeMins={examSettings.timeMins} onHome={()=>{ DB.saveSession(user.id,{screen:"exam",mode,examQ,examA,examCur}); setScreen("home"); }} onProgress={(cur,ans)=>{ setExamCur(cur); setExamA(ans); DB.saveSession(user.id,{screen:"exam",mode,examQ,examA:ans,examCur:cur}); }} />;
   if (screen === "results") return <ResultsScreen questions={examQ} answers={examA} mode={mode} onRetry={()=>setScreen("home")} onHome={()=>setScreen("home")} userName={user.name} />;
 
   const examResults  = myResults.filter(r => r.mode === "exam" || !r.mode);
@@ -1554,6 +1596,38 @@ function StudentDashboard({ user, onLogout }) {
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814" }}>
+      {/* Resume Modal */}
+      {showResumeModal && savedSession && (
+        <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:T.surface, borderRadius:18, padding:24, maxWidth:360, width:"100%", boxShadow:"0 8px 40px rgba(0,0,0,0.25)" }}>
+            <div style={{ textAlign:"center", marginBottom:16 }}>
+              <div style={{ fontSize:48, marginBottom:8 }}>
+                {savedSession.screen==="exam"?"🎯":savedSession.screen==="study"?"📚":"📖"}
+              </div>
+              <div style={{ fontWeight:800, fontSize:18, color:T.ink, marginBottom:6 }}>لديك جلسة سابقة</div>
+              <div style={{ color:T.ink3, fontSize:13 }}>
+                {savedSession.screen==="exam"?"اختبار SCHS":savedSession.screen==="study"?"دورة مراجعة":"Study Materials"}
+                {savedSession.examQ?.length > 0 && ` · السؤال ${(savedSession.examCur||0)+1} من ${savedSession.examQ.length}`}
+              </div>
+              {savedSession.savedAt && (
+                <div style={{ color:T.ink3, fontSize:11, marginTop:4 }}>
+                  آخر حفظ: {new Date(savedSession.savedAt).toLocaleTimeString("ar-SA")}
+                </div>
+              )}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <button onClick={resumeSession}
+                style={{ ...S.btn(savedSession.screen==="exam"?"#B83B2A":savedSession.screen==="study"?"#1A7A5E":"#7C4BA0"), padding:"13px", fontSize:15, fontWeight:800, borderRadius:12 }}>
+                ▶ استئناف من حيث توقفت
+              </button>
+              <button onClick={discardSession}
+                style={{ ...S.ghost, padding:"11px", fontSize:14, borderRadius:12, color:"#B83B2A", border:"1px solid rgba(184,59,42,0.3)" }}>
+                بدء جديد (حذف الجلسة)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div style={{ background:T.bg2, borderBottom:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -1568,7 +1642,8 @@ function StudentDashboard({ user, onLogout }) {
             <div style={{ fontWeight:700, fontSize:12 }}>{user.name}</div>
             <div style={{ color:"#8C7B6E", fontSize:10 }}>{user.university||user.email}</div>
           </div>
-          <button onClick={onLogout} style={{ background:"rgba(184,59,42,0.08)", border:"1px solid rgba(184,59,42,0.2)", borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:11, fontWeight:700, color:"#B83B2A" }}>Sign Out</button>
+          <button onClick={()=>{ DB.saveSession(user.id,{screen,mode,examQ,examA,examCur}); onLogout(); }}
+            style={{ background:"rgba(184,59,42,0.08)", border:"1px solid rgba(184,59,42,0.2)", borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:11, fontWeight:700, color:"#B83B2A" }}>Sign Out</button>
         </div>
       </div>
 
@@ -2497,9 +2572,9 @@ difficulty must be one of: سهل, متوسط, صعب`;
   return null;
 }
 
-function StudyScreen({ questions, onFinish, onHome }) {
-  const [cur, setCur] = useState(0);
-  const [answers, setAnswers] = useState({});
+function StudyScreen({ questions, initialCur=0, initialAnswers={}, onFinish, onHome, onProgress }) {
+  const [cur, setCur] = useState(initialCur);
+  const [answers, setAnswers] = useState(initialAnswers);
   const [showExp, setShowExp] = useState(false);
 
   const q = questions && questions.length > 0 ? questions[cur] : null;
@@ -2578,23 +2653,23 @@ function StudyScreen({ questions, onFinish, onHome }) {
         </div>
       </div>
       {/* Fixed bottom nav */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10 }}>
-        <button onClick={prev} disabled={cur===0}
-          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>‹ Back</button>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10, direction:"ltr" }}>
         {answered
           ? <button onClick={next} style={{ ...S.btn("#1A7A5E"), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
               {cur < questions.length-1 ? "Next ›" : "Finish ✓"}
             </button>
           : <button disabled style={{ ...S.btn(T.bg3), flex:1, padding:"12px", opacity:0.4, color:T.ink3 }}>Choose an answer</button>
         }
+        <button onClick={prev} disabled={cur===0}
+          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>‹ Back</button>
       </div>
     </div>
   );
 }
 
-function ExamScreen({ questions, onFinish, timeMins, onHome }) {
-  const [cur, setCur] = useState(0);
-  const [answers, setAnswers] = useState({});
+function ExamScreen({ questions, initialCur=0, initialAnswers={}, onFinish, timeMins, onHome, onProgress }) {
+  const [cur, setCur] = useState(initialCur);
+  const [answers, setAnswers] = useState(initialAnswers);
   const totalSecs = (timeMins || 120) * 60;
   const [secsLeft, setSecsLeft] = useState(totalSecs);
   const startTimeRef = React.useRef(Date.now());
@@ -2641,7 +2716,13 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
   const answered = answers[q.id] !== undefined;
   const col = SC[q.section] || { accent:"#2B5FA6", bg:T.bg };
   const diffCol = { "سهل":"#1A7A5E", "متوسط":"#C47A1E", "صعب":"#B83B2A" };
-  const next = () => { if (cur < questions.length-1) setCur(p=>p+1); else onFinish(answers); };
+  const next = () => {
+    if (cur < questions.length-1) {
+      const newCur = cur + 1;
+      setCur(newCur);
+      if (onProgress) onProgress(newCur, answers);
+    } else { onFinish(answers); }
+  };
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg, fontFamily:"system-ui,sans-serif", color:"#1C1814", display:"flex", flexDirection:"column" }}>
@@ -2687,12 +2768,12 @@ function ExamScreen({ questions, onFinish, timeMins, onHome }) {
         </div>
       </div>
       {/* Fixed bottom nav */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10 }}>
-        <button onClick={()=>{ if(cur>0) setCur(p=>p-1); }} disabled={cur===0}
-          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>‹ Back</button>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10, direction:"ltr" }}>
         <button onClick={next} style={{ ...S.btn(col.accent), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
           {cur < questions.length-1 ? (answered ? "Next ›" : "Skip ›") : "Finish Exam ✓"}
         </button>
+        <button onClick={()=>{ if(cur>0) setCur(p=>p-1); }} disabled={cur===0}
+          style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>‹ Back</button>
       </div>
     </div>
   );
