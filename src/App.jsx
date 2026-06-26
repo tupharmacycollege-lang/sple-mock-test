@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 
-const API_URL = "https://y0ww5f6rnf.execute-api.eu-north-1.amazonaws.com/prod2";
+const API_URL = "https://y0ww5f6rnf.execute-api.eu-north-1.amazonaws.com";
 
 // ===================== RESPONSIVE HOOK =====================
 function useIsMobile() {
