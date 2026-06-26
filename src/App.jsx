@@ -1464,11 +1464,10 @@ function StudentDashboard({ user, onLogout }) {
       const mine = all.filter(r => r.userId === user.id);
       if (mine.length > 0) setMyResults(mine);
     });
-    // Check for saved session
+    // Check for saved session (don't show modal at login, show on button click)
     const sess = DB.getSession(user.id);
     if (sess) {
       setSavedSession(sess);
-      setShowResumeModal(true);
     }
   }, []);
 
@@ -1563,17 +1562,26 @@ function StudentDashboard({ user, onLogout }) {
     </div>
   );
   if (starting) return (
-    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:20 }}>
-      <div style={{ fontSize:72, animation:"spin 2s linear infinite" }}>⏳</div>
-      <div style={{ fontWeight:800, fontSize:20, color:startingMode==="exam"?"#B83B2A":"#1A7A5E" }}>
-        {startingMode==="exam" ? "🎯 جاري تحضير الاختبار..." : "📚 جاري تحضير الدورة..."}
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, padding:24 }}>
+      <div style={{ fontSize:80, animation:"spin 2s linear infinite" }}>⏳</div>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontWeight:800, fontSize:22, color:startingMode==="exam"?"#B83B2A":"#1A7A5E", marginBottom:6 }}>
+          {startingMode==="exam" ? "جاري تحضير الاختبار" : "جاري تحضير الدورة"}
+        </div>
+        <div style={{ fontWeight:500, fontSize:14, color:T.ink3, marginBottom:4 }}>
+          {startingMode==="exam" ? "Preparing your SPLE Exam..." : "Preparing your Study Session..."}
+        </div>
+        <div style={{ color:T.ink3, fontSize:13, maxWidth:300, lineHeight:1.6 }}>
+          {startingMode==="exam"
+            ? "يتم تجهيز الأسئلة وفق معايير SCHS
+Questions aligned with SCHS blueprint"
+            : "يتم اختيار الأسئلة المناسبة لمستواك
+Selecting questions for your level"}
+        </div>
       </div>
-      <div style={{ color:T.ink3, fontSize:14, textAlign:"center", maxWidth:280 }}>
-        {startingMode==="exam" ? "يتم تجهيز أسئلتك حسب معايير SCHS" : "يتم اختيار الأسئلة المناسبة لمستواك"}
-      </div>
-      <div style={{ display:"flex", gap:8, marginTop:8 }}>
+      <div style={{ display:"flex", gap:10, marginTop:8 }}>
         {[0,1,2].map(i=>(
-          <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:startingMode==="exam"?"#B83B2A":"#1A7A5E", animation:`pulse 1.2s ease-in-out ${i*0.4}s infinite` }} />
+          <div key={i} style={{ width:12, height:12, borderRadius:"50%", background:startingMode==="exam"?"#B83B2A":"#1A7A5E", animation:`pulse 1.2s ease-in-out ${i*0.4}s infinite` }} />
         ))}
       </div>
       <style>{`
@@ -1604,25 +1612,30 @@ function StudentDashboard({ user, onLogout }) {
               <div style={{ fontSize:48, marginBottom:8 }}>
                 {savedSession.screen==="exam"?"🎯":savedSession.screen==="study"?"📚":"📖"}
               </div>
-              <div style={{ fontWeight:800, fontSize:18, color:T.ink, marginBottom:6 }}>لديك جلسة سابقة</div>
-              <div style={{ color:T.ink3, fontSize:13 }}>
-                {savedSession.screen==="exam"?"اختبار SCHS":savedSession.screen==="study"?"دورة مراجعة":"Study Materials"}
-                {savedSession.examQ?.length > 0 && ` · السؤال ${(savedSession.examCur||0)+1} من ${savedSession.examQ.length}`}
+              <div style={{ fontWeight:800, fontSize:18, color:T.ink, marginBottom:4 }}>لديك جلسة سابقة</div>
+              <div style={{ fontWeight:500, fontSize:13, color:T.ink3, marginBottom:4 }}>You have an unfinished session</div>
+              <div style={{ color:T.ink2, fontSize:13, fontWeight:600 }}>
+                {savedSession.screen==="exam"?"🎯 اختبار SCHS · SCHS Exam":savedSession.screen==="study"?"📚 دورة المراجعة · Study Session":"📖 مواد الدراسة · Study Materials"}
+                {savedSession.examQ?.length > 0 && (
+                  <span style={{ display:"block", marginTop:4, color:T.ink3, fontSize:12 }}>
+                    السؤال {(savedSession.examCur||0)+1} من {savedSession.examQ.length} · Q{(savedSession.examCur||0)+1} of {savedSession.examQ.length}
+                  </span>
+                )}
               </div>
               {savedSession.savedAt && (
                 <div style={{ color:T.ink3, fontSize:11, marginTop:4 }}>
-                  آخر حفظ: {new Date(savedSession.savedAt).toLocaleTimeString("ar-SA")}
+                  آخر حفظ · Last saved: {new Date(savedSession.savedAt).toLocaleTimeString()}
                 </div>
               )}
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               <button onClick={resumeSession}
                 style={{ ...S.btn(savedSession.screen==="exam"?"#B83B2A":savedSession.screen==="study"?"#1A7A5E":"#7C4BA0"), padding:"13px", fontSize:15, fontWeight:800, borderRadius:12 }}>
-                ▶ استئناف من حيث توقفت
+                استئناف · Resume
               </button>
               <button onClick={discardSession}
                 style={{ ...S.ghost, padding:"11px", fontSize:14, borderRadius:12, color:"#B83B2A", border:"1px solid rgba(184,59,42,0.3)" }}>
-                بدء جديد (حذف الجلسة)
+                بدء جديد · Start New
               </button>
             </div>
           </div>
@@ -1684,7 +1697,7 @@ function StudentDashboard({ user, onLogout }) {
               <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>⏱ {examSettings.timeMins} min</span>
               <span style={{ background:"rgba(184,59,42,0.1)", color:"#B83B2A", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>🔒 No Hints</span>
             </div>
-            <button onClick={()=>startSession("exam")} style={{ ...S.btn("#B83B2A"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>Start Exam ›</button>
+            <button onClick={()=>{ if(savedSession&&savedSession.screen==="exam"){setShowResumeModal(true);}else{startSession("exam");}}} style={{ ...S.btn("#B83B2A"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>ابدأ الاختبار</button>
           </div>
 
           {/* Study Mode */}
@@ -1707,7 +1720,7 @@ function StudentDashboard({ user, onLogout }) {
               <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>✅ Instant Answer</span>
               <span style={{ background:"rgba(26,122,94,0.1)", color:"#1A7A5E", fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:20 }}>💡 Explanation</span>
             </div>
-            <button onClick={()=>startSession("study")} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>Start Study ›</button>
+            <button onClick={()=>{ if(savedSession&&savedSession.screen==="study"){setShowResumeModal(true);}else{startSession("study");}}} style={{ ...S.btn("#1A7A5E"), width:"100%", padding:"12px", fontSize:14, fontWeight:700 }}>ابدأ الدورة</button>
           </div>
         </div>
 
@@ -1718,7 +1731,7 @@ function StudentDashboard({ user, onLogout }) {
             <div style={{ fontWeight:700, fontSize:13, color:"#7C4BA0" }}>Study Materials</div>
             <div style={{ color:"#8C7B6E", fontSize:11, marginTop:2 }}>23 comprehensive lessons with key points</div>
           </div>
-          <button onClick={()=>setScreen("materials")} style={{ ...S.btn("#7C4BA0"), padding:"8px 14px", fontSize:12, flexShrink:0, whiteSpace:"nowrap" }}>Browse ›</button>
+          <button onClick={()=>{ if(savedSession&&savedSession.screen==="materials"){setShowResumeModal(true);}else{setScreen("materials"); DB.saveSession(user.id,{screen:"materials",mode,examQ:[],examA:{},examCur:0});}}} style={{ ...S.btn("#7C4BA0"), padding:"8px 14px", fontSize:12, flexShrink:0, whiteSpace:"nowrap" }}>تصفح</button>
         </div>
 
         {/* ── Performance Stats ── */}
@@ -2656,7 +2669,7 @@ function StudyScreen({ questions, initialCur=0, initialAnswers={}, onFinish, onH
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10, direction:"ltr" }}>
         {answered
           ? <button onClick={next} style={{ ...S.btn("#1A7A5E"), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
-              {cur < questions.length-1 ? "Next ›" : "Finish ✓"}
+              {cur < questions.length-1 ? "التالي" : "إنهاء"}
             </button>
           : <button disabled style={{ ...S.btn(T.bg3), flex:1, padding:"12px", opacity:0.4, color:T.ink3 }}>Choose an answer</button>
         }
@@ -2770,7 +2783,7 @@ function ExamScreen({ questions, initialCur=0, initialAnswers={}, onFinish, time
       {/* Fixed bottom nav */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:T.surface, borderTop:`1px solid ${T.border}`, padding:"12px 16px", display:"flex", gap:10, direction:"ltr" }}>
         <button onClick={next} style={{ ...S.btn(col.accent), flex:1, padding:"12px", fontSize:14, fontWeight:700 }}>
-          {cur < questions.length-1 ? (answered ? "Next ›" : "Skip ›") : "Finish Exam ✓"}
+          {cur < questions.length-1 ? (answered ? "التالي" : "تخطي") : "إنهاء الاختبار"}
         </button>
         <button onClick={()=>{ if(cur>0) setCur(p=>p-1); }} disabled={cur===0}
           style={{ ...S.ghost, padding:"11px 16px", opacity:cur===0?0.3:1, fontSize:13 }}>‹ Back</button>
